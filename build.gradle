@@ -1,0 +1,21 @@
+plugins {
+    id "java"
+    id "application"
+}
+
+group = "dev.httpserver"
+version = "0.1.0"
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+application {
+    mainClass = "dev.httpserver.blocking.BlockingEchoServer"
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = "UTF-8"
+}
