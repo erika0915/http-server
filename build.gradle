@@ -33,3 +33,10 @@ tasks.register("runNioEchoServer", JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
     mainClass = "dev.httpserver.nio.NioEchoServer"
 }
+
+tasks.register("runByteBufferExperiment", JavaExec) {
+    group = "application"
+    description = "Run the ByteBuffer experiment"
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "dev.httpserver.nio.buffer.ByteBufferExperiment"
+}
