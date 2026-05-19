@@ -13,9 +13,23 @@ java {
 }
 
 application {
-    mainClass = "dev.httpserver.blocking.BlockingEchoServer"
+    mainClass = "dev.httpserver.nio.NioEchoServer"
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = "UTF-8"
+}
+
+tasks.register("runBlockingEchoServer", JavaExec) {
+    group = "application"
+    description = "Run the blocking echo server"
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "dev.httpserver.blocking.BlockingEchoServer"
+}
+
+tasks.register("runNioEchoServer", JavaExec) {
+    group = "application"
+    description = "Run the NIO echo server"
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "dev.httpserver.nio.NioEchoServer"
 }
