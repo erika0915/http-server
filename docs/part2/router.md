@@ -126,8 +126,8 @@ Spring MVC의 `DispatcherServlet`은 요청을 받아 적절한 controller/handl
 
 문자열 길이가 아니라 UTF-8 바이트 길이로 계산해야 합니다. 한글처럼 한 문자가 여러 바이트인 경우가 있기 때문입니다.
 
-## Connection: close
+## Connection
 
-아직 Keep-Alive를 구현하지 않았기 때문에 모든 응답은 `Connection: close`를 사용합니다.
+Router 단계에서는 모든 응답이 `Connection: close`를 사용했습니다.
 
-서버는 응답을 보낸 뒤 channel을 닫습니다.
+이후 Keep-Alive 단계에서는 `HttpServer`가 요청 Header를 보고 `Connection: keep-alive` 또는 `Connection: close`를 선택합니다.
