@@ -13,7 +13,7 @@ java {
 }
 
 application {
-    mainClass = "dev.httpserver.nio.NioEchoServer"
+    mainClass = "dev.httpserver.nio.http.MinimalHttpServer"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -39,4 +39,11 @@ tasks.register("runByteBufferExperiment", JavaExec) {
     description = "Run the ByteBuffer experiment"
     classpath = sourceSets.main.runtimeClasspath
     mainClass = "dev.httpserver.nio.buffer.ByteBufferExperiment"
+}
+
+tasks.register("runMinimalHttpServer", JavaExec) {
+    group = "application"
+    description = "Run the minimal NIO HTTP server"
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "dev.httpserver.nio.http.MinimalHttpServer"
 }
