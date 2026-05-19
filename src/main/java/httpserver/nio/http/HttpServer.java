@@ -15,6 +15,7 @@ import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Iterator;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class HttpServer {
 
@@ -24,6 +25,7 @@ public class HttpServer {
 
     private static final HttpRequestParser REQUEST_PARSER = new HttpRequestParser();
     private static final Router ROUTER = new Router();
+    private static final AtomicInteger CONNECTION_ID_SEQUENCE = new AtomicInteger(1);
 
     public static void main(String[] args) {
         try (Selector selector = Selector.open();
@@ -44,7 +46,7 @@ public class HttpServer {
              */
             serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-            System.out.println("[server] NIO HTTP Server with Router started");
+            System.out.println("[server] NIO HTTP Server with Keep-Alive started");
             System.out.println("[server] Listening on http://" + HOST + ":" + PORT);
             System.out.println("[server] Try: curl -v localhost:8080/");
 
@@ -84,20 +86,28 @@ public class HttpServer {
         }
 
         clientChannel.configureBlocking(false);
-        clientChannel.register(selector, SelectionKey.OP_READ);
 
-        System.out.println("[server] Client connected: " + clientChannel.getRemoteAddress());
+        /*
+         * SelectionKey attachment를 사용해 SocketChannel별 상태를 저장합니다.
+         * Keep-Alive에서는 같은 연결에서 여러 요청이 들어올 수 있으므로
+         * 연결 단위 로그를 보려면 이런 작은 context가 있으면 편합니다.
+         */
+        ConnectionContext context = new ConnectionContext(CONNECTION_ID_SEQUENCE.getAndIncrement());
+        clientChannel.register(selector, SelectionKey.OP_READ, context);
+
+        System.out.println(context.label() + " connected " + clientChannel.getRemoteAddress());
     }
 
     private static void readParseAndRespond(SelectionKey key) {
         SocketChannel clientChannel = (SocketChannel) key.channel();
+        ConnectionContext context = (ConnectionContext) key.attachment();
         ByteBuffer requestBuffer = ByteBuffer.allocate(BUFFER_SIZE);
 
         try {
             int totalBytesRead = readUntilHeaderEnd(clientChannel, requestBuffer);
 
             if (totalBytesRead == -1) {
-                closeClient(key, clientChannel);
+                closeClient(key, clientChannel, context);
                 return;
             }
 
@@ -117,21 +127,57 @@ public class HttpServer {
 
             try {
                 HttpRequest request = REQUEST_PARSER.parse(rawRequest);
-                printParsedRequest(clientChannel, totalBytesRead, rawRequest, request);
+                int requestNumber = context.nextRequestNumber();
+                System.out.println(context.label() + " request #" + requestNumber
+                        + " " + request.getMethod() + " " + request.getPath());
+
+                printParsedRequest(context, clientChannel, totalBytesRead, rawRequest, request);
                 HttpResponse response = ROUTER.handle(request);
-                printSelectedRoute(request, response);
+                boolean keepAlive = shouldKeepAlive(request);
+
+                /*
+                 * HTTP/1.1은 기본적으로 keep-alive입니다.
+                 * 단, 클라이언트가 Connection: close를 보내면 응답에도 close를 넣고 연결을 닫습니다.
+                 */
+                response.setConnection(keepAlive);
+
+                printSelectedRoute(context, request, response, keepAlive);
                 writeResponse(clientChannel, response);
+
+                if (keepAlive) {
+                    System.out.println(context.label() + " keep-alive enabled");
+                    return;
+                }
             } catch (IllegalArgumentException e) {
-                System.err.println("[server] Failed to parse request: " + e.getMessage());
+                System.err.println(context.label() + " failed to parse request: " + e.getMessage());
                 printRawRequest(rawRequest);
-                writeResponse(clientChannel, HttpResponse.notFound());
+                HttpResponse response = HttpResponse.notFound();
+                response.setConnection(false);
+                writeResponse(clientChannel, response);
             }
 
-            closeClient(key, clientChannel);
+            closeClient(key, clientChannel, context);
         } catch (IOException e) {
-            System.err.println("[server] Client error: " + e.getMessage());
-            closeClient(key, clientChannel);
+            System.err.println(context.label() + " client error: " + e.getMessage());
+            closeClient(key, clientChannel, context);
         }
+    }
+
+    private static boolean shouldKeepAlive(HttpRequest request) {
+        String connection = request.getHeaders().get("Connection");
+
+        if (connection != null && "close".equalsIgnoreCase(connection.trim())) {
+            return false;
+        }
+
+        /*
+         * 이번 단계의 규칙:
+         * - HTTP/1.1 기본은 keep-alive
+         * - Connection: close면 종료
+         *
+         * HTTP/1.0의 keep-alive 확장 규칙은 지금 단계에서 깊게 다루지 않습니다.
+         */
+        return "HTTP/1.1".equalsIgnoreCase(request.getVersion());
     }
 
     private static int readUntilHeaderEnd(SocketChannel clientChannel, ByteBuffer requestBuffer) throws IOException {
@@ -180,6 +226,7 @@ public class HttpServer {
     }
 
     private static void printParsedRequest(
+            ConnectionContext context,
             SocketChannel clientChannel,
             int totalBytesRead,
             String rawRequest,
@@ -187,8 +234,8 @@ public class HttpServer {
     ) throws IOException {
         System.out.println();
         System.out.println("==================================================");
-        System.out.println("[server] Parsed HTTP request from " + clientChannel.getRemoteAddress());
-        System.out.println("[server] Bytes read: " + totalBytesRead);
+        System.out.println(context.label() + " parsed HTTP request from " + clientChannel.getRemoteAddress());
+        System.out.println(context.label() + " bytes read: " + totalBytesRead);
 
         printRawRequest(rawRequest);
 
@@ -207,11 +254,17 @@ public class HttpServer {
         System.out.println("==================================================");
     }
 
-    private static void printSelectedRoute(HttpRequest request, HttpResponse response) {
+    private static void printSelectedRoute(
+            ConnectionContext context,
+            HttpRequest request,
+            HttpResponse response,
+            boolean keepAlive
+    ) {
         System.out.println();
         System.out.println("----- selected route -----");
-        System.out.println("request = " + request.getMethod() + " " + request.getPath());
-        System.out.println("response = " + response.getStatusCode() + " " + response.getReasonPhrase());
+        System.out.println(context.label() + " request = " + request.getMethod() + " " + request.getPath());
+        System.out.println(context.label() + " response = " + response.getStatusCode() + " " + response.getReasonPhrase());
+        System.out.println(context.label() + " connection = " + (keepAlive ? "keep-alive" : "close"));
         System.out.println("content-type = " + response.getHeaders().get("Content-Type"));
     }
 
@@ -235,13 +288,13 @@ public class HttpServer {
         }
     }
 
-    private static void closeClient(SelectionKey key, SocketChannel clientChannel) {
+    private static void closeClient(SelectionKey key, SocketChannel clientChannel, ConnectionContext context) {
         try {
-            System.out.println("[server] Closing connection: " + clientChannel.getRemoteAddress());
+            System.out.println(context.label() + " closed " + clientChannel.getRemoteAddress());
             key.cancel();
             clientChannel.close();
         } catch (IOException e) {
-            System.err.println("[server] Error while closing client: " + e.getMessage());
+            System.err.println(context.label() + " error while closing client: " + e.getMessage());
         }
     }
 }

@@ -36,7 +36,8 @@ public class HttpResponse {
         this.headers.put("Content-Length", String.valueOf(body.length));
 
         /*
-         * 아직 Keep-Alive를 구현하지 않았으므로 모든 응답 후 연결을 닫습니다.
+         * 기본값은 close입니다.
+         * HttpServer가 요청 Header를 보고 keep-alive 여부를 결정한 뒤 setConnection()으로 덮어씁니다.
          */
         this.headers.put("Connection", "close");
     }
@@ -80,6 +81,14 @@ public class HttpResponse {
 
     public Map<String, String> getHeaders() {
         return headers;
+    }
+
+    public void setHeader(String name, String value) {
+        headers.put(name, value);
+    }
+
+    public void setConnection(boolean keepAlive) {
+        setHeader("Connection", keepAlive ? "keep-alive" : "close");
     }
 
     public byte[] getBody() {
