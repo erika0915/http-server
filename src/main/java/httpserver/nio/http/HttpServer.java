@@ -11,7 +11,9 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -19,9 +21,14 @@ public class HttpServer {
 
     private static final String HOST = "localhost";
     private static final int PORT = 8080;
+    private static final long IDLE_TIMEOUT_MILLIS = 30_000;
+    private static final long SELECT_TIMEOUT_MILLIS = 1_000;
+    private static final int MAX_HEADER_BYTES = 8 * 1024;
     private static final HttpRequestParser REQUEST_PARSER = new HttpRequestParser();
     private static final Router ROUTER = new Router();
     private static final AtomicInteger CONNECTION_ID_SEQUENCE = new AtomicInteger(1);
+    private static final Map<Integer, Connection> ACTIVE_CONNECTIONS = new HashMap<>();
+    private static int lastPrintedActiveConnectionCount = -1;
 
     public static void main(String[] args) {
         try (Selector selector = Selector.open();
@@ -42,7 +49,7 @@ public class HttpServer {
              */
             serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-            System.out.println("[server] NIO HTTP Server with Partial Read/Write started");
+            System.out.println("[server] NIO HTTP Server with Timeout/Cleanup started");
             System.out.println("[server] Listening on http://" + HOST + ":" + PORT);
             System.out.println("[server] Try: curl -v localhost:8080/");
 
@@ -56,7 +63,11 @@ public class HttpServer {
                  * 그래서 Event Loop는 channel 자체보다 Connection을 꺼내서
                  * "이 연결이 지금 어떤 상태인가?"를 중심으로 처리할 수 있습니다.
                  */
-                selector.select();
+                /*
+                 * select(timeout)을 사용하면 새 이벤트가 없어도 주기적으로 깨어날 수 있습니다.
+                 * 이 덕분에 아무 요청도 보내지 않는 idle keep-alive 연결도 정리할 수 있습니다.
+                 */
+                selector.select(SELECT_TIMEOUT_MILLIS);
 
                 Set<SelectionKey> selectedKeys = selector.selectedKeys();
                 Iterator<SelectionKey> iterator = selectedKeys.iterator();
@@ -94,6 +105,8 @@ public class HttpServer {
                         writeResponse(key);
                     }
                 }
+
+                cleanupConnections(System.currentTimeMillis());
             }
         } catch (IOException e) {
             System.err.println("[server] Server error: " + e.getMessage());
@@ -118,7 +131,10 @@ public class HttpServer {
          * key.attachment()로 해당 채널의 상태 객체를 바로 꺼낼 수 있습니다.
          */
         Connection connection = new Connection(CONNECTION_ID_SEQUENCE.getAndIncrement(), clientChannel);
-        clientChannel.register(selector, SelectionKey.OP_READ, connection);
+        SelectionKey clientKey = clientChannel.register(selector, SelectionKey.OP_READ, connection);
+        connection.attachSelectionKey(clientKey);
+        ACTIVE_CONNECTIONS.put(connection.connectionId(), connection);
+        printActiveConnectionCount();
     }
 
     private static void readAndMaybePrepareResponse(SelectionKey key) {
@@ -128,14 +144,26 @@ public class HttpServer {
             int totalBytesRead = connection.appendReadData();
 
             if (totalBytesRead == -1) {
-                closeConnection(key, connection);
+                closeConnection(key, connection, "client-closed");
+                return;
+            }
+
+            if (connection.requestBytes() > MAX_HEADER_BYTES) {
+                System.err.println(connection.label() + " header too large");
+                HttpResponse response = HttpResponse.requestHeaderFieldsTooLarge();
+                connection.prepareResponse(response, false);
+                printErrorResponse(connection, response);
+                key.interestOps(SelectionKey.OP_WRITE);
                 return;
             }
 
             if (!connection.isRequestComplete()) {
                 if (!connection.canReadMore()) {
                     System.err.println(connection.label() + " read buffer is full before request was complete");
-                    closeConnection(key, connection);
+                    HttpResponse response = HttpResponse.requestHeaderFieldsTooLarge();
+                    connection.prepareResponse(response, false);
+                    printErrorResponse(connection, response);
+                    key.interestOps(SelectionKey.OP_WRITE);
                     return;
                 }
 
@@ -176,15 +204,19 @@ public class HttpServer {
                 printSelectedRoute(connection, request, response, keepAlive);
                 key.interestOps(SelectionKey.OP_WRITE);
             } catch (IllegalArgumentException e) {
-                System.err.println(connection.label() + " failed to parse request: " + e.getMessage());
+                System.err.println(connection.label() + " malformed request: " + e.getMessage());
                 printRawRequest(rawRequest);
-                HttpResponse response = HttpResponse.notFound();
+                HttpResponse response = HttpResponse.badRequest();
                 connection.prepareResponse(response, false);
+                printErrorResponse(connection, response);
                 key.interestOps(SelectionKey.OP_WRITE);
             }
         } catch (IOException e) {
-            System.err.println(connection.label() + " client error: " + e.getMessage());
-            closeConnection(key, connection);
+            System.err.println(connection.label() + " IOException during read, closing: " + e.getMessage());
+            closeConnection(key, connection, "read-error");
+        } catch (RuntimeException e) {
+            System.err.println(connection.label() + " unexpected read error: " + e.getMessage());
+            prepareInternalServerError(key, connection);
         }
     }
 
@@ -206,11 +238,23 @@ public class HttpServer {
                 return;
             }
 
-            closeConnection(key, connection);
+            closeConnection(key, connection, "connection-close");
         } catch (IOException e) {
-            System.err.println(connection.label() + " write error: " + e.getMessage());
-            closeConnection(key, connection);
+            System.err.println(connection.label() + " IOException during write, closing: " + e.getMessage());
+            closeConnection(key, connection, "write-error");
         }
+    }
+
+    private static void prepareInternalServerError(SelectionKey key, Connection connection) {
+        if (!key.isValid()) {
+            closeConnection(key, connection, "internal-error");
+            return;
+        }
+
+        HttpResponse response = HttpResponse.internalServerError();
+        connection.prepareResponse(response, false);
+        printErrorResponse(connection, response);
+        key.interestOps(SelectionKey.OP_WRITE);
     }
 
     private static boolean shouldKeepAlive(HttpRequest request) {
@@ -272,6 +316,11 @@ public class HttpServer {
         System.out.println("content-type = " + response.getHeaders().get("Content-Type"));
     }
 
+    private static void printErrorResponse(Connection connection, HttpResponse response) {
+        System.out.println(connection.label() + " response "
+                + response.getStatusCode() + " " + response.getReasonPhrase());
+    }
+
     private static void printRawRequest(String rawRequest) {
         String visibleRawRequest = rawRequest.replace("\r", "\\r");
 
@@ -284,8 +333,46 @@ public class HttpServer {
         System.out.println("----- raw request end -----");
     }
 
-    private static void closeConnection(SelectionKey key, Connection connection) {
+    private static void cleanupConnections(long now) {
+        Iterator<Connection> iterator = ACTIVE_CONNECTIONS.values().iterator();
+
+        while (iterator.hasNext()) {
+            Connection connection = iterator.next();
+
+            if (connection.isClosed()) {
+                iterator.remove();
+                continue;
+            }
+
+            if (connection.isIdleTimeout(now, IDLE_TIMEOUT_MILLIS)) {
+                System.out.println(connection.label() + " idle timeout after " + IDLE_TIMEOUT_MILLIS + "ms");
+
+                SelectionKey key = connection.selectionKey();
+                if (key != null) {
+                    key.cancel();
+                }
+
+                connection.close("idle-timeout");
+                iterator.remove();
+            }
+        }
+
+        printActiveConnectionCount();
+    }
+
+    private static void closeConnection(SelectionKey key, Connection connection, String reason) {
         key.cancel();
-        connection.close();
+        connection.close(reason);
+        ACTIVE_CONNECTIONS.remove(connection.connectionId());
+        printActiveConnectionCount();
+    }
+
+    private static void printActiveConnectionCount() {
+        int activeConnectionCount = ACTIVE_CONNECTIONS.size();
+
+        if (activeConnectionCount != lastPrintedActiveConnectionCount) {
+            System.out.println("[server] active connections=" + activeConnectionCount);
+            lastPrintedActiveConnectionCount = activeConnectionCount;
+        }
     }
 }

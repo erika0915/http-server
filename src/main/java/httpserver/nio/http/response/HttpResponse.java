@@ -58,6 +58,18 @@ public class HttpResponse {
         return of(404, "Not Found", "text/plain", "404 Not Found");
     }
 
+    public static HttpResponse badRequest() {
+        return of(400, "Bad Request", "text/plain", "400 Bad Request");
+    }
+
+    public static HttpResponse requestHeaderFieldsTooLarge() {
+        return of(431, "Request Header Fields Too Large", "text/plain", "431 Request Header Fields Too Large");
+    }
+
+    public static HttpResponse internalServerError() {
+        return of(500, "Internal Server Error", "text/plain", "500 Internal Server Error");
+    }
+
     public static HttpResponse methodNotAllowed() {
         return of(405, "Method Not Allowed", "text/plain", "405 Method Not Allowed");
     }

@@ -5,6 +5,7 @@ import httpserver.nio.http.response.HttpResponse;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 
@@ -17,6 +18,7 @@ public class Connection {
     private final ByteBuffer readBuffer;
 
     private ByteBuffer writeBuffer;
+    private SelectionKey selectionKey;
     private ConnectionState state;
     private boolean keepAlive;
     private final long connectedAt;
@@ -44,12 +46,32 @@ public class Connection {
         return "[conn-" + connectionId + "]";
     }
 
+    public int connectionId() {
+        return connectionId;
+    }
+
     public SocketChannel channel() {
         return channel;
     }
 
+    public void attachSelectionKey(SelectionKey selectionKey) {
+        this.selectionKey = selectionKey;
+    }
+
+    public SelectionKey selectionKey() {
+        return selectionKey;
+    }
+
     public ConnectionState state() {
         return state;
+    }
+
+    public boolean isClosed() {
+        return state == ConnectionState.CLOSED;
+    }
+
+    public boolean isIdleTimeout(long now, long timeoutMillis) {
+        return !isClosed() && now - lastActiveAt >= timeoutMillis;
     }
 
     public boolean keepAlive() {
@@ -202,10 +224,15 @@ public class Connection {
     }
 
     public void close() {
+        close("normal");
+    }
+
+    public void close(String reason) {
         try {
+            transitionTo(ConnectionState.CLOSING);
             transitionTo(ConnectionState.CLOSED);
             channel.close();
-            System.out.println(label() + " closed");
+            System.out.println(label() + " closed reason=" + reason);
         } catch (IOException e) {
             System.err.println(label() + " error while closing: " + e.getMessage());
         }
