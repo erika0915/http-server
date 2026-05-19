@@ -27,6 +27,8 @@ public class Connection {
     private HttpResponse pendingResponse;
     private HttpRequest currentRequest;
     private int requestCount;
+    private long currentRequestStartedAtNanos;
+    private int lastBytesWritten;
 
     public Connection(int connectionId, SocketChannel channel) {
         this.connectionId = connectionId;
@@ -129,6 +131,10 @@ public class Connection {
                 break;
             }
 
+            if (currentRequestStartedAtNanos == 0L) {
+                currentRequestStartedAtNanos = System.nanoTime();
+            }
+
             totalBytesRead += bytesRead;
 
             if (isRequestComplete()) {
@@ -157,6 +163,10 @@ public class Connection {
      */
     public int requestBytes() {
         return readBuffer.position();
+    }
+
+    public long currentRequestStartedAtNanos() {
+        return currentRequestStartedAtNanos;
     }
 
     public String readRequestText() {
@@ -204,6 +214,7 @@ public class Connection {
         updateLastActive();
 
         int bytesWritten = channel.write(writeBuffer);
+        lastBytesWritten = bytesWritten;
         System.out.println(label() + " wrote " + bytesWritten + " bytes");
 
         if (writeBuffer.hasRemaining()) {
@@ -218,9 +229,15 @@ public class Connection {
     public void readyToReadNextRequest() {
         currentRequest = null;
         pendingResponse = null;
+        currentRequestStartedAtNanos = 0L;
+        lastBytesWritten = 0;
         readBuffer.clear();
         writeBuffer = ByteBuffer.allocate(0);
         transitionTo(ConnectionState.READING);
+    }
+
+    public int lastBytesWritten() {
+        return lastBytesWritten;
     }
 
     public void close() {

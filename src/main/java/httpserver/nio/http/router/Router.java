@@ -2,11 +2,14 @@ package httpserver.nio.http.router;
 
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.metrics.MetricsHandler;
+import httpserver.nio.http.metrics.ServerMetrics;
 import httpserver.nio.http.staticfile.StaticFileHandler;
 
 public class Router {
 
     private final StaticFileHandler staticFileHandler = new StaticFileHandler();
+    private final MetricsHandler metricsHandler = new MetricsHandler(ServerMetrics.global());
 
     public HttpResponse handle(HttpRequest request) {
         /*
@@ -15,6 +18,10 @@ public class Router {
          */
         if (!"GET".equalsIgnoreCase(request.getMethod())) {
             return HttpResponse.methodNotAllowed();
+        }
+
+        if ("/metrics".equals(request.getPath())) {
+            return metricsHandler.handle();
         }
 
         return staticFileHandler.handle(request.getPath());

@@ -2,6 +2,8 @@ package httpserver.nio.http;
 
 import httpserver.nio.http.eventloop.BossEventLoop;
 import httpserver.nio.http.eventloop.EventLoopGroup;
+import httpserver.nio.http.metrics.MetricsReporter;
+import httpserver.nio.http.metrics.ServerMetrics;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -29,6 +31,7 @@ public class HttpServer {
              */
             EventLoopGroup workerGroup = new EventLoopGroup(workerCount);
             workerGroup.start();
+            new MetricsReporter(ServerMetrics.global()).start();
 
             BossEventLoop bossEventLoop = new BossEventLoop(serverChannel, workerGroup);
 

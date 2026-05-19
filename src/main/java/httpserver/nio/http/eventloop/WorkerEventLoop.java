@@ -4,6 +4,8 @@ import httpserver.nio.http.connection.Connection;
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.request.HttpRequestParser;
 import httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.metrics.ServerMetrics;
+import httpserver.nio.http.metrics.WorkerStats;
 import httpserver.nio.http.router.Router;
 
 import java.io.IOException;
@@ -30,6 +32,8 @@ public class WorkerEventLoop implements Runnable {
     private final Map<Integer, Connection> activeConnections;
     private final HttpRequestParser requestParser;
     private final Router router;
+    private final ServerMetrics metrics;
+    private final WorkerStats stats;
 
     private int lastPrintedActiveConnectionCount;
 
@@ -41,6 +45,8 @@ public class WorkerEventLoop implements Runnable {
         this.activeConnections = new HashMap<>();
         this.requestParser = new HttpRequestParser();
         this.router = new Router();
+        this.metrics = ServerMetrics.global();
+        this.stats = metrics.workerStats(name);
         this.lastPrintedActiveConnectionCount = -1;
     }
 
@@ -84,6 +90,7 @@ public class WorkerEventLoop implements Runnable {
 
             connection.attachSelectionKey(key);
             activeConnections.put(connection.connectionId(), connection);
+            metrics.recordConnectionAccepted(stats);
 
             System.out.println("[" + name + "] registered conn-" + connection.connectionId());
             printActiveConnectionCount();
@@ -117,6 +124,7 @@ public class WorkerEventLoop implements Runnable {
 
         try {
             int totalBytesRead = connection.appendReadData();
+            metrics.recordBytesRead(stats, totalBytesRead);
 
             if (totalBytesRead == -1) {
                 closeConnection(key, connection, "client-closed");
@@ -161,6 +169,7 @@ public class WorkerEventLoop implements Runnable {
             try {
                 HttpRequest request = requestParser.parse(rawRequest);
                 connection.setCurrentRequest(request);
+                metrics.recordRequest(stats);
 
                 int requestNumber = connection.nextRequestNumber();
                 System.out.println("[" + name + "] request " + request.getMethod() + " " + request.getPath()
@@ -196,10 +205,16 @@ public class WorkerEventLoop implements Runnable {
 
         try {
             boolean responseComplete = connection.writePendingResponse();
+            metrics.recordBytesWritten(stats, connection.lastBytesWritten());
 
             if (!responseComplete) {
                 key.interestOps(SelectionKey.OP_WRITE);
                 return;
+            }
+
+            long startedAtNanos = connection.currentRequestStartedAtNanos();
+            if (startedAtNanos > 0L) {
+                metrics.recordResponseTime(System.nanoTime() - startedAtNanos);
             }
 
             System.out.println("[" + name + "] response complete conn-" + connection.connectionId());
@@ -321,6 +336,7 @@ public class WorkerEventLoop implements Runnable {
 
                 connection.close("idle-timeout");
                 iterator.remove();
+                metrics.recordConnectionClosed(stats);
             }
         }
 
@@ -330,7 +346,9 @@ public class WorkerEventLoop implements Runnable {
     private void closeConnection(SelectionKey key, Connection connection, String reason) {
         key.cancel();
         connection.close(reason);
-        activeConnections.remove(connection.connectionId());
+        if (activeConnections.remove(connection.connectionId()) != null) {
+            metrics.recordConnectionClosed(stats);
+        }
         printActiveConnectionCount();
     }
 
