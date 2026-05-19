@@ -13,7 +13,7 @@ java {
 }
 
 application {
-    mainClass = "dev.httpserver.nio.http.MinimalHttpServer"
+    mainClass = "dev.httpserver.nio.http.HttpRequestObservationServer"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -46,4 +46,11 @@ tasks.register("runMinimalHttpServer", JavaExec) {
     description = "Run the minimal NIO HTTP server"
     classpath = sourceSets.main.runtimeClasspath
     mainClass = "dev.httpserver.nio.http.MinimalHttpServer"
+}
+
+tasks.register("runHttpRequestObservationServer", JavaExec) {
+    group = "application"
+    description = "Run the HTTP request observation server"
+    classpath = sourceSets.main.runtimeClasspath
+    mainClass = "dev.httpserver.nio.http.HttpRequestObservationServer"
 }
