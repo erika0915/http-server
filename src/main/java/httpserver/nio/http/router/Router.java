@@ -2,8 +2,11 @@ package httpserver.nio.http.router;
 
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.staticfile.StaticFileHandler;
 
 public class Router {
+
+    private final StaticFileHandler staticFileHandler = new StaticFileHandler();
 
     public HttpResponse handle(HttpRequest request) {
         /*
@@ -14,15 +17,6 @@ public class Router {
             return HttpResponse.methodNotAllowed();
         }
 
-        /*
-         * 지금은 route table이나 handler 인터페이스를 만들지 않고
-         * switch로 path만 단순 분기합니다.
-         */
-        return switch (request.getPath()) {
-            case "/" -> HttpResponse.okText("Hello NIO HTTP Server");
-            case "/hello" -> HttpResponse.okText("Hello Router");
-            case "/users" -> HttpResponse.okJson("[{\"id\":1,\"name\":\"soohee\"},{\"id\":2,\"name\":\"nio\"}]");
-            default -> HttpResponse.notFound();
-        };
+        return staticFileHandler.handle(request.getPath());
     }
 }

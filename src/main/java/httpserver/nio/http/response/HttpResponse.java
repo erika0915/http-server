@@ -1,6 +1,7 @@
 package httpserver.nio.http.response;
 
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -9,17 +10,17 @@ public class HttpResponse {
     private final int statusCode;
     private final String reasonPhrase;
     private final Map<String, String> headers;
-    private final String body;
+    private final byte[] body;
 
     private HttpResponse(
             int statusCode,
             String reasonPhrase,
             String contentType,
-            String body
+            byte[] body
     ) {
         this.statusCode = statusCode;
         this.reasonPhrase = reasonPhrase;
-        this.body = body;
+        this.body = Arrays.copyOf(body, body.length);
         this.headers = new LinkedHashMap<>();
 
         /*
@@ -32,7 +33,7 @@ public class HttpResponse {
          * Content-Length는 문자 수가 아니라 body를 바이트로 변환했을 때의 길이입니다.
          * 한글이나 이모지처럼 UTF-8에서 여러 바이트가 되는 문자가 있을 수 있기 때문입니다.
          */
-        this.headers.put("Content-Length", String.valueOf(body.getBytes(StandardCharsets.UTF_8).length));
+        this.headers.put("Content-Length", String.valueOf(body.length));
 
         /*
          * 아직 Keep-Alive를 구현하지 않았으므로 모든 응답 후 연결을 닫습니다.
@@ -41,19 +42,32 @@ public class HttpResponse {
     }
 
     public static HttpResponse okText(String body) {
-        return new HttpResponse(200, "OK", "text/plain", body);
+        return of(200, "OK", "text/plain", body);
     }
 
     public static HttpResponse okJson(String body) {
-        return new HttpResponse(200, "OK", "application/json", body);
+        return of(200, "OK", "application/json", body);
+    }
+
+    public static HttpResponse okBytes(String contentType, byte[] body) {
+        return new HttpResponse(200, "OK", contentType, body);
     }
 
     public static HttpResponse notFound() {
-        return new HttpResponse(404, "Not Found", "text/plain", "404 Not Found");
+        return of(404, "Not Found", "text/plain", "404 Not Found");
     }
 
     public static HttpResponse methodNotAllowed() {
-        return new HttpResponse(405, "Method Not Allowed", "text/plain", "405 Method Not Allowed");
+        return of(405, "Method Not Allowed", "text/plain", "405 Method Not Allowed");
+    }
+
+    private static HttpResponse of(int statusCode, String reasonPhrase, String contentType, String body) {
+        return new HttpResponse(
+                statusCode,
+                reasonPhrase,
+                contentType,
+                body.getBytes(StandardCharsets.UTF_8)
+        );
     }
 
     public int getStatusCode() {
@@ -68,8 +82,8 @@ public class HttpResponse {
         return headers;
     }
 
-    public String getBody() {
-        return body;
+    public byte[] getBody() {
+        return Arrays.copyOf(body, body.length);
     }
 
     public byte[] toBytes() {
@@ -100,8 +114,13 @@ public class HttpResponse {
          * 이 빈 줄이 \r\n\r\n 구조를 완성합니다.
          */
         response.append("\r\n");
-        response.append(body);
 
-        return response.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] headerBytes = response.toString().getBytes(StandardCharsets.UTF_8);
+        byte[] responseBytes = new byte[headerBytes.length + body.length];
+
+        System.arraycopy(headerBytes, 0, responseBytes, 0, headerBytes.length);
+        System.arraycopy(body, 0, responseBytes, headerBytes.length, body.length);
+
+        return responseBytes;
     }
 }

@@ -46,7 +46,7 @@ public class HttpServer {
 
             System.out.println("[server] NIO HTTP Server with Router started");
             System.out.println("[server] Listening on http://" + HOST + ":" + PORT);
-            System.out.println("[server] Try: curl -v localhost:8080/hello");
+            System.out.println("[server] Try: curl -v localhost:8080/");
 
             while (true) {
                 selector.select();
