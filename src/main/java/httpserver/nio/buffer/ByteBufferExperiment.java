@@ -1,4 +1,4 @@
-package dev.httpserver.nio.buffer;
+package httpserver.nio.buffer;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;

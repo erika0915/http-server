@@ -5,7 +5,7 @@ NIO Echo Server 다음 단계로, 브라우저와 curl이 실제 HTTP 서버로 
 이 문서가 설명하는 파일:
 
 ```text
-src/main/java/dev/httpserver/nio/http/MinimalHttpServer.java
+src/main/java/httpserver/nio/http/MinimalHttpServer.java
 ```
 
 아직 구현하지 않는 것:
@@ -75,8 +75,8 @@ gradle runMinimalHttpServer
 JDK로 직접 실행:
 
 ```bash
-javac -d build/classes/java/main src/main/java/dev/httpserver/nio/http/MinimalHttpServer.java
-java -cp build/classes/java/main dev.httpserver.nio.http.MinimalHttpServer
+javac -d build/classes/java/main src/main/java/httpserver/nio/http/MinimalHttpServer.java
+java -cp build/classes/java/main httpserver.nio.http.MinimalHttpServer
 ```
 
 ## 테스트 방법

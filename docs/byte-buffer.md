@@ -5,7 +5,7 @@
 이 문서가 설명하는 파일:
 
 ```text
-src/main/java/dev/httpserver/nio/buffer/ByteBufferExperiment.java
+src/main/java/httpserver/nio/buffer/ByteBufferExperiment.java
 ```
 
 이 코드는 네트워크 서버가 아닙니다. `SocketChannel`, `Selector`, `ServerSocketChannel`을 사용하지 않고 `ByteBuffer`만 실험합니다.
@@ -27,8 +27,8 @@ gradle runByteBufferExperiment
 JDK로 직접 실행:
 
 ```bash
-javac -d build/classes/java/main src/main/java/dev/httpserver/nio/buffer/ByteBufferExperiment.java
-java -cp build/classes/java/main dev.httpserver.nio.buffer.ByteBufferExperiment
+javac -d build/classes/java/main src/main/java/httpserver/nio/buffer/ByteBufferExperiment.java
+java -cp build/classes/java/main httpserver.nio.buffer.ByteBufferExperiment
 ```
 
 ## 핵심 개념

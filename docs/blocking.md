@@ -9,7 +9,7 @@ Java 네트워크 기초와 TCP 흐름을 이해하기 위한 Blocking I/O Echo 
 이 문서가 설명하는 파일:
 
 ```text
-src/main/java/dev/httpserver/blocking/BlockingEchoServer.java
+src/main/java/httpserver/blocking/BlockingEchoServer.java
 ```
 
 구현된 내용:
@@ -41,7 +41,7 @@ src/main/java/dev/httpserver/blocking/BlockingEchoServer.java
 
 ```text
 src/main/java
-└── dev/httpserver
+└── httpserver
     └── blocking
         └── BlockingEchoServer.java
 ```
@@ -68,8 +68,8 @@ gradle run
 JDK로 직접 실행:
 
 ```bash
-javac -d build/classes/java/main src/main/java/dev/httpserver/blocking/BlockingEchoServer.java
-java -cp build/classes/java/main dev.httpserver.blocking.BlockingEchoServer
+javac -d build/classes/java/main src/main/java/httpserver/blocking/BlockingEchoServer.java
+java -cp build/classes/java/main httpserver.blocking.BlockingEchoServer
 ```
 
 서버가 정상 실행되면 다음과 비슷한 로그가 출력됩니다.

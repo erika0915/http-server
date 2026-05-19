@@ -7,9 +7,9 @@ HTTP 요청 문자열을 `HttpRequest` 객체로 변환하는 첫 번째 Parser 
 관련 파일:
 
 ```text
-src/main/java/dev/httpserver/nio/http/HttpServer.java
-src/main/java/dev/httpserver/nio/http/request/HttpRequest.java
-src/main/java/dev/httpserver/nio/http/request/HttpRequestParser.java
+src/main/java/httpserver/nio/http/HttpServer.java
+src/main/java/httpserver/nio/http/request/HttpRequest.java
+src/main/java/httpserver/nio/http/request/HttpRequestParser.java
 ```
 
 아직 구현하지 않는 것:
@@ -58,8 +58,8 @@ gradle runHttpServer
 JDK로 직접 실행:
 
 ```bash
-javac -d build/classes/java/main src/main/java/dev/httpserver/nio/http/request/HttpRequest.java src/main/java/dev/httpserver/nio/http/request/HttpRequestParser.java src/main/java/dev/httpserver/nio/http/HttpServer.java
-java -cp build/classes/java/main dev.httpserver.nio.http.HttpServer
+javac -d build/classes/java/main src/main/java/httpserver/nio/http/request/HttpRequest.java src/main/java/httpserver/nio/http/request/HttpRequestParser.java src/main/java/httpserver/nio/http/HttpServer.java
+java -cp build/classes/java/main httpserver.nio.http.HttpServer
 ```
 
 ## 테스트 방법

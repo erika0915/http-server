@@ -1,4 +1,4 @@
-package dev.httpserver.nio.http.response;
+package httpserver.nio.http.response;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;

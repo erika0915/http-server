@@ -5,7 +5,7 @@
 이 문서가 설명하는 파일:
 
 ```text
-src/main/java/dev/httpserver/nio/http/HttpRequestObservationServer.java
+src/main/java/httpserver/nio/http/HttpRequestObservationServer.java
 ```
 
 이번 단계의 목적은 HTTP 요청을 완전히 파싱하는 것이 아닙니다. 요청을 raw text로 출력하고, Request Line과 Header 구조를 눈으로 확인하는 것이 목적입니다.
@@ -55,8 +55,8 @@ gradle runHttpRequestObservationServer
 JDK로 직접 실행:
 
 ```bash
-javac -d build/classes/java/main src/main/java/dev/httpserver/nio/http/HttpRequestObservationServer.java
-java -cp build/classes/java/main dev.httpserver.nio.http.HttpRequestObservationServer
+javac -d build/classes/java/main src/main/java/httpserver/nio/http/HttpRequestObservationServer.java
+java -cp build/classes/java/main httpserver.nio.http.HttpRequestObservationServer
 ```
 
 ## 테스트 방법

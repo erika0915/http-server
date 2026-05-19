@@ -5,11 +5,11 @@ HTTP 요청을 `HttpRequest` 객체로 파싱한 뒤, URL path에 따라 다른 
 관련 파일:
 
 ```text
-src/main/java/dev/httpserver/nio/http/HttpServer.java
-src/main/java/dev/httpserver/nio/http/request/HttpRequest.java
-src/main/java/dev/httpserver/nio/http/request/HttpRequestParser.java
-src/main/java/dev/httpserver/nio/http/response/HttpResponse.java
-src/main/java/dev/httpserver/nio/http/router/Router.java
+src/main/java/httpserver/nio/http/HttpServer.java
+src/main/java/httpserver/nio/http/request/HttpRequest.java
+src/main/java/httpserver/nio/http/request/HttpRequestParser.java
+src/main/java/httpserver/nio/http/response/HttpResponse.java
+src/main/java/httpserver/nio/http/router/Router.java
 ```
 
 아직 구현하지 않는 것:

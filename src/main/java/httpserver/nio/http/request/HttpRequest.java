@@ -1,4 +1,4 @@
-package dev.httpserver.nio.http.request;
+package httpserver.nio.http.request;
 
 import java.util.Collections;
 import java.util.Map;

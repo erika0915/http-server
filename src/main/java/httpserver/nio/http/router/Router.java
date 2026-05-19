@@ -1,7 +1,7 @@
-package dev.httpserver.nio.http.router;
+package httpserver.nio.http.router;
 
-import dev.httpserver.nio.http.request.HttpRequest;
-import dev.httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.request.HttpRequest;
+import httpserver.nio.http.response.HttpResponse;
 
 public class Router {
 

@@ -3,7 +3,7 @@ plugins {
     id "application"
 }
 
-group = "dev.httpserver"
+group = "httpserver"
 version = "0.1.0"
 
 java {
@@ -13,7 +13,7 @@ java {
 }
 
 application {
-    mainClass = "dev.httpserver.nio.http.HttpServer"
+    mainClass = "httpserver.nio.http.HttpServer"
 }
 
 tasks.withType(JavaCompile).configureEach {
@@ -24,40 +24,40 @@ tasks.register("runBlockingEchoServer", JavaExec) {
     group = "application"
     description = "Run the blocking echo server"
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = "dev.httpserver.blocking.BlockingEchoServer"
+    mainClass = "httpserver.blocking.BlockingEchoServer"
 }
 
 tasks.register("runNioEchoServer", JavaExec) {
     group = "application"
     description = "Run the NIO echo server"
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = "dev.httpserver.nio.NioEchoServer"
+    mainClass = "httpserver.nio.NioEchoServer"
 }
 
 tasks.register("runByteBufferExperiment", JavaExec) {
     group = "application"
     description = "Run the ByteBuffer experiment"
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = "dev.httpserver.nio.buffer.ByteBufferExperiment"
+    mainClass = "httpserver.nio.buffer.ByteBufferExperiment"
 }
 
 tasks.register("runMinimalHttpServer", JavaExec) {
     group = "application"
     description = "Run the minimal NIO HTTP server"
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = "dev.httpserver.nio.http.MinimalHttpServer"
+    mainClass = "httpserver.nio.http.MinimalHttpServer"
 }
 
 tasks.register("runHttpRequestObservationServer", JavaExec) {
     group = "application"
     description = "Run the HTTP request observation server"
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = "dev.httpserver.nio.http.HttpRequestObservationServer"
+    mainClass = "httpserver.nio.http.HttpRequestObservationServer"
 }
 
 tasks.register("runHttpServer", JavaExec) {
     group = "application"
     description = "Run the NIO HTTP server with request parser"
     classpath = sourceSets.main.runtimeClasspath
-    mainClass = "dev.httpserver.nio.http.HttpServer"
+    mainClass = "httpserver.nio.http.HttpServer"
 }

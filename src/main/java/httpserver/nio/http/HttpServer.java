@@ -1,9 +1,9 @@
-package dev.httpserver.nio.http;
+package httpserver.nio.http;
 
-import dev.httpserver.nio.http.response.HttpResponse;
-import dev.httpserver.nio.http.router.Router;
-import dev.httpserver.nio.http.request.HttpRequest;
-import dev.httpserver.nio.http.request.HttpRequestParser;
+import httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.router.Router;
+import httpserver.nio.http.request.HttpRequest;
+import httpserver.nio.http.request.HttpRequestParser;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

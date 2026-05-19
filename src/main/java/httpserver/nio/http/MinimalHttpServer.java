@@ -1,4 +1,4 @@
-package dev.httpserver.nio.http;
+package httpserver.nio.http;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

@@ -9,7 +9,7 @@ Java NIO의 핵심 개념인 `Selector`, `ServerSocketChannel`, `SocketChannel`,
 이 문서가 설명하는 파일:
 
 ```text
-src/main/java/dev/httpserver/nio/NioEchoServer.java
+src/main/java/httpserver/nio/NioEchoServer.java
 ```
 
 구현된 내용:
@@ -37,7 +37,7 @@ src/main/java/dev/httpserver/nio/NioEchoServer.java
 
 ```text
 src/main/java
-└── dev/httpserver
+└── httpserver
     └── nio
         └── NioEchoServer.java
 ```
@@ -45,7 +45,7 @@ src/main/java
 현재 패키지:
 
 ```java
-package dev.httpserver.nio;
+package httpserver.nio;
 ```
 
 ## 서버 실행 방법
@@ -73,8 +73,8 @@ gradle runNioEchoServer
 JDK로 직접 실행:
 
 ```bash
-javac -d build/classes/java/main src/main/java/dev/httpserver/nio/NioEchoServer.java
-java -cp build/classes/java/main dev.httpserver.nio.NioEchoServer
+javac -d build/classes/java/main src/main/java/httpserver/nio/NioEchoServer.java
+java -cp build/classes/java/main httpserver.nio.NioEchoServer
 ```
 
 ## 테스트 방법
