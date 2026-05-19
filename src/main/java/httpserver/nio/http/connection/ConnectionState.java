@@ -1,4 +1,4 @@
-package httpserver.nio.http;
+package httpserver.nio.http.connection;
 
 public enum ConnectionState {
     READING,

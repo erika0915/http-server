@@ -1,4 +1,4 @@
-package httpserver.nio.http;
+package httpserver.nio.http.connection;
 
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.response.HttpResponse;
