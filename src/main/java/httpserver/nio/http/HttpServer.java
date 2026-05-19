@@ -7,7 +7,6 @@ import httpserver.nio.http.request.HttpRequestParser;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -43,7 +42,7 @@ public class HttpServer {
              */
             serverChannel.register(selector, SelectionKey.OP_ACCEPT);
 
-            System.out.println("[server] NIO HTTP Server with Connection state started");
+            System.out.println("[server] NIO HTTP Server with Partial Read/Write started");
             System.out.println("[server] Listening on http://" + HOST + ":" + PORT);
             System.out.println("[server] Try: curl -v localhost:8080/");
 
@@ -72,8 +71,27 @@ public class HttpServer {
 
                     if (key.isAcceptable()) {
                         acceptClient(selector, key);
-                    } else if (key.isReadable()) {
-                        readParseAndRespond(key);
+                        continue;
+                    }
+
+                    /*
+                     * OP_READ:
+                     * 요청 바이트를 Connection.readBuffer에 누적합니다.
+                     * 아직 \r\n\r\n이 오지 않았다면 요청이 완성되지 않은 것이므로
+                     * Router를 호출하지 않고 계속 읽기 이벤트를 기다립니다.
+                     */
+                    if (key.isReadable()) {
+                        readAndMaybePrepareResponse(key);
+                    }
+
+                    /*
+                     * OP_WRITE:
+                     * Connection.writeBuffer에 남아 있는 응답 바이트를 전송합니다.
+                     * 한 번에 다 쓰지 못하면 OP_WRITE를 유지하고,
+                     * 다 쓰면 keep-alive 여부에 따라 OP_READ로 돌아가거나 연결을 닫습니다.
+                     */
+                    if (key.isValid() && key.isWritable()) {
+                        writeResponse(key);
                     }
                 }
             }
@@ -103,7 +121,7 @@ public class HttpServer {
         clientChannel.register(selector, SelectionKey.OP_READ, connection);
     }
 
-    private static void readParseAndRespond(SelectionKey key) {
+    private static void readAndMaybePrepareResponse(SelectionKey key) {
         Connection connection = (Connection) key.attachment();
 
         try {
@@ -114,10 +132,27 @@ public class HttpServer {
                 return;
             }
 
+            if (!connection.isRequestComplete()) {
+                if (!connection.canReadMore()) {
+                    System.err.println(connection.label() + " read buffer is full before request was complete");
+                    closeConnection(key, connection);
+                    return;
+                }
+
+                if (totalBytesRead == 0) {
+                    return;
+                }
+
+                System.out.println(connection.label() + " request incomplete, waiting for more data");
+                key.interestOps(SelectionKey.OP_READ);
+                return;
+            }
+
             if (totalBytesRead == 0) {
                 return;
             }
 
+            System.out.println(connection.label() + " request complete");
             String rawRequest = connection.readRequestText();
 
             try {
@@ -128,7 +163,7 @@ public class HttpServer {
                 System.out.println(connection.label() + " request #" + requestNumber
                         + " " + request.getMethod() + " " + request.getPath());
 
-                printParsedRequest(connection, totalBytesRead, rawRequest, request);
+                printParsedRequest(connection, connection.requestBytes(), rawRequest, request);
                 HttpResponse response = ROUTER.handle(request);
                 boolean keepAlive = shouldKeepAlive(request);
 
@@ -139,24 +174,41 @@ public class HttpServer {
                 connection.prepareResponse(response, keepAlive);
 
                 printSelectedRoute(connection, request, response, keepAlive);
-                connection.writePendingResponse();
-
-                if (keepAlive) {
-                    System.out.println(connection.label() + " keep-alive " + connection.keepAlive());
-                    connection.readyToReadNextRequest();
-                    return;
-                }
+                key.interestOps(SelectionKey.OP_WRITE);
             } catch (IllegalArgumentException e) {
                 System.err.println(connection.label() + " failed to parse request: " + e.getMessage());
                 printRawRequest(rawRequest);
                 HttpResponse response = HttpResponse.notFound();
                 connection.prepareResponse(response, false);
-                connection.writePendingResponse();
+                key.interestOps(SelectionKey.OP_WRITE);
+            }
+        } catch (IOException e) {
+            System.err.println(connection.label() + " client error: " + e.getMessage());
+            closeConnection(key, connection);
+        }
+    }
+
+    private static void writeResponse(SelectionKey key) {
+        Connection connection = (Connection) key.attachment();
+
+        try {
+            boolean responseComplete = connection.writePendingResponse();
+
+            if (!responseComplete) {
+                key.interestOps(SelectionKey.OP_WRITE);
+                return;
+            }
+
+            if (connection.keepAlive()) {
+                System.out.println(connection.label() + " keep-alive " + connection.keepAlive());
+                connection.readyToReadNextRequest();
+                key.interestOps(SelectionKey.OP_READ);
+                return;
             }
 
             closeConnection(key, connection);
         } catch (IOException e) {
-            System.err.println(connection.label() + " client error: " + e.getMessage());
+            System.err.println(connection.label() + " write error: " + e.getMessage());
             closeConnection(key, connection);
         }
     }

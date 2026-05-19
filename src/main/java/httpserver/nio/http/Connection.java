@@ -78,14 +78,19 @@ public class Connection {
     }
 
     /**
-     * SocketChannel에서 읽은 데이터를 이 Connection의 readBuffer에 추가합니다.
+     * SocketChannel에서 지금 도착해 있는 바이트를 readBuffer 뒤쪽에 이어 붙입니다.
      *
-     * <p>아직 partial read를 완성하지 않는 단계이므로, 요청 하나가 처리될 때마다
-     * readBuffer를 비우고 현재 도착한 요청 하나를 담는 단순 구조를 유지합니다.
+     * <p>이전 단계와 가장 큰 차이는 readBuffer.clear()를 먼저 호출하지 않는다는 점입니다.
+     * HTTP 요청이 여러 TCP 조각으로 나뉘어 들어올 수 있으므로, \r\n\r\n을 찾기 전까지는
+     * 기존에 읽어 둔 바이트를 보존해야 합니다.
+     *
+     * <p>Non-Blocking 모드의 read()는 다음 세 가지 값을 반환할 수 있습니다.
+     * - 양수: 실제로 읽은 바이트 수
+     * - 0: 지금 당장 읽을 데이터가 없음
+     * - -1: 클라이언트가 연결을 종료함
      */
     public int appendReadData() throws IOException {
         updateLastActive();
-        readBuffer.clear();
 
         int totalBytesRead = 0;
 
@@ -96,13 +101,15 @@ public class Connection {
                 return -1;
             }
 
+            System.out.println(label() + " read " + bytesRead + " bytes");
+
             if (bytesRead == 0) {
                 break;
             }
 
             totalBytesRead += bytesRead;
 
-            if (containsHeaderEnd()) {
+            if (isRequestComplete()) {
                 break;
             }
         }
@@ -110,11 +117,37 @@ public class Connection {
         return totalBytesRead;
     }
 
+    public boolean isRequestComplete() {
+        return containsHeaderEnd();
+    }
+
+    /*
+     * readBuffer가 꽉 찼는데도 \r\n\r\n을 찾지 못했다면,
+     * 지금 단계의 단순 서버는 더 이상 요청을 누적할 공간이 없습니다.
+     */
+    public boolean canReadMore() {
+        return readBuffer.hasRemaining();
+    }
+
+    /*
+     * 현재까지 누적된 요청 바이트 수입니다.
+     * partial read 테스트에서는 마지막 read() 크기보다 이 값이 더 중요합니다.
+     */
+    public int requestBytes() {
+        return readBuffer.position();
+    }
+
     public String readRequestText() {
-        readBuffer.flip();
+        /*
+         * parse를 위해 buffer를 읽기 모드로 바꾸되, 원본 readBuffer의 position은
+         * 유지합니다. 원본을 flip() 해버리면 다음 상태 전환에서 buffer를 관리하기
+         * 어려워지기 때문입니다.
+         */
+        ByteBuffer readOnlyBuffer = readBuffer.asReadOnlyBuffer();
+        readOnlyBuffer.flip();
 
         return StandardCharsets.UTF_8
-                .decode(readBuffer)
+                .decode(readOnlyBuffer)
                 .toString();
     }
 
@@ -138,19 +171,26 @@ public class Connection {
     }
 
     /**
-     * 준비된 응답을 channel에 씁니다.
+     * writeBuffer에 담긴 응답 바이트를 SocketChannel로 한 번 써 봅니다.
      *
-     * <p>아직 partial write를 완성하지 않으므로 현재 단계에서는 작은 응답이
-     * 이 루프 안에서 모두 써진다고 가정합니다.
+     * <p>Non-Blocking write()는 응답 전체를 한 번에 전송하지 못할 수 있습니다.
+     * 그래서 while로 끝까지 밀어 넣지 않고, 이번 이벤트에서 쓸 수 있는 만큼만 쓴 뒤
+     * 남은 데이터가 있으면 false를 반환합니다. HttpServer는 false를 받으면 OP_WRITE를
+     * 유지해서 다음 쓰기 가능 이벤트에서 이어 씁니다.
      */
-    public void writePendingResponse() throws IOException {
+    public boolean writePendingResponse() throws IOException {
         updateLastActive();
 
-        while (writeBuffer.hasRemaining()) {
-            channel.write(writeBuffer);
+        int bytesWritten = channel.write(writeBuffer);
+        System.out.println(label() + " wrote " + bytesWritten + " bytes");
+
+        if (writeBuffer.hasRemaining()) {
+            System.out.println(label() + " write incomplete, remaining=" + writeBuffer.remaining());
+            return false;
         }
 
-        System.out.println(label() + " response sent");
+        System.out.println(label() + " response complete");
+        return true;
     }
 
     public void readyToReadNextRequest() {
