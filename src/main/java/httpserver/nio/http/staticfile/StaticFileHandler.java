@@ -32,7 +32,11 @@ public class StaticFileHandler {
          * toAbsolutePath().normalize()를 해두면 이후 요청 path와 비교할 때
          * 기준 경로가 명확해집니다.
          */
-        this.root = Paths.get("public").toAbsolutePath().normalize();
+        this(Paths.get("public"));
+    }
+
+    public StaticFileHandler(Path root) {
+        this.root = root.toAbsolutePath().normalize();
         System.out.println("[static] public root = " + root);
     }
 

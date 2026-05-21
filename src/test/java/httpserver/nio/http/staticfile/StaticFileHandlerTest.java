@@ -2,7 +2,9 @@ package httpserver.nio.http.staticfile;
 
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.response.HttpResponse;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -14,7 +16,18 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class StaticFileHandlerTest {
 
-    private final StaticFileHandler handler = new StaticFileHandler();
+    @TempDir
+    Path root;
+
+    private StaticFileHandler handler;
+
+    @BeforeEach
+    void setUp() throws Exception {
+        Files.writeString(root.resolve("index.html"), "<!doctype html><h1>Hello</h1>");
+        Files.writeString(root.resolve("style.css"), "body { color: black; }");
+
+        handler = new StaticFileHandler(root);
+    }
 
     @Test
     void servesIndexHtmlWithMetadataHeaders() {
@@ -53,7 +66,7 @@ class StaticFileHandlerTest {
 
     @Test
     void returnsDirectoryListingWhenIndexIsMissing() throws Exception {
-        Path directory = Path.of("public", "test-listing");
+        Path directory = root.resolve("test-listing");
         Path file = directory.resolve("example.txt");
 
         Files.createDirectories(directory);
@@ -66,9 +79,6 @@ class StaticFileHandlerTest {
         String body = new String(response.getBody(), StandardCharsets.UTF_8);
         assertTrue(body.contains("<!doctype html>"));
         assertTrue(body.contains("example.txt"));
-
-        Files.deleteIfExists(file);
-        Files.deleteIfExists(directory);
     }
 
     private HttpRequest get(String path) {
