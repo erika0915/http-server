@@ -21,3 +21,4 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 | 11 | Connection State Management | 연결별 상태 관리 이해 | `Connection` 객체가 buffer, 상태, keep-alive 여부, lifecycle을 관리하도록 리팩토링했습니다. | [docs/11-connection-state.md](docs/11-connection-state.md) |
 | 12 | Timeout / Cleanup | 안정적인 연결 정리 이해 | idle timeout, 잘못된 요청 처리, header size 제한, connection cleanup을 구현했습니다. | [docs/12-timeout-cleanup.md](docs/12-timeout-cleanup.md) |
 | 13 | Multi EventLoop | Reactor 구조 이해 | accept 전용 Boss EventLoop와 read/write 전용 Worker EventLoop를 분리했습니다. | [docs/13-multi-event-loop.md](docs/13-multi-event-loop.md) |
+| 14 | HTTP/1.1 Request Validation | 요청 라인 검증 이해 | HTTP method, path, version 형식을 검증하고 잘못된 요청은 `400 Bad Request`로 응답하도록 구현했습니다. | [docs/14-http-request-validation.md](docs/14-http-request-validation.md) |

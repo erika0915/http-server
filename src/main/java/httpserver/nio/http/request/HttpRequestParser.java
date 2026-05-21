@@ -58,6 +58,8 @@ public class HttpRequestParser {
         String path = requestLineParts[1];
         String version = requestLineParts[2];
 
+        validateRequestLine(method, path, version);
+
         /*
          * HTTP Header 이름은 대소문자를 구분하지 않습니다.
          * 예를 들어 Host, host, HOST는 같은 header 이름으로 취급해야 합니다.
@@ -88,5 +90,54 @@ public class HttpRequestParser {
         }
 
         return new HttpRequest(method, path, version, headers, body);
+    }
+
+    private void validateRequestLine(String method, String path, String version) {
+        /*
+         * Step 14: Request Line을 최소한의 HTTP 요청 형식으로 검증합니다.
+         *
+         * 여기서는 아직 Host header, Content-Length body, chunked body 같은
+         * 다음 단계의 검증은 하지 않습니다.
+         */
+        if (!isValidMethodToken(method)) {
+            throw new IllegalArgumentException("Invalid HTTP method: " + method);
+        }
+
+        if (!isValidPath(path)) {
+            throw new IllegalArgumentException("Invalid HTTP path: " + path);
+        }
+
+        if (!isSupportedHttpVersion(version)) {
+            throw new IllegalArgumentException("Invalid HTTP version: " + version);
+        }
+    }
+
+    private boolean isValidMethodToken(String method) {
+        /*
+         * HTTP method는 공백 없는 token입니다.
+         * 이 학습 단계에서는 GET, POST, HEAD처럼 대문자 알파벳으로 된 method만 허용합니다.
+         *
+         * Router가 실제로 처리하지 않는 method는 이후 405 Method Not Allowed로 응답합니다.
+         */
+        return method != null && method.matches("[A-Z]+");
+    }
+
+    private boolean isValidPath(String path) {
+        /*
+         * origin-form 요청 target의 가장 단순한 형태는 / 로 시작합니다.
+         *
+         * 예:
+         * GET / HTTP/1.1
+         * GET /hello HTTP/1.1
+         */
+        return path != null && path.startsWith("/") && !path.contains(" ");
+    }
+
+    private boolean isSupportedHttpVersion(String version) {
+        /*
+         * 현재 서버는 HTTP/1.x 학습용 서버입니다.
+         * HTTP/1.0과 HTTP/1.1만 유효한 version으로 다룹니다.
+         */
+        return "HTTP/1.0".equals(version) || "HTTP/1.1".equals(version);
     }
 }
