@@ -81,6 +81,60 @@ class StaticFileHandlerTest {
         assertTrue(body.contains("example.txt"));
     }
 
+    @Test
+    void returnsNotFoundForMissingFile() {
+        HttpResponse response = handler.handle(get("/nonexistent.html"));
+
+        assertEquals(404, response.getStatusCode());
+    }
+
+    @Test
+    void servesCssFileWithCorrectContentType() throws Exception {
+        Files.writeString(root.resolve("main.css"), "body { margin: 0; }");
+
+        HttpResponse response = handler.handle(get("/main.css"));
+
+        assertEquals(200, response.getStatusCode());
+        assertEquals("text/css; charset=utf-8", response.getHeaders().get("Content-Type"));
+    }
+
+    @Test
+    void servesJsFileWithCorrectContentType() throws Exception {
+        Files.writeString(root.resolve("app.js"), "console.log('hello');");
+
+        HttpResponse response = handler.handle(get("/app.js"));
+
+        assertEquals(200, response.getStatusCode());
+        assertEquals("application/javascript; charset=utf-8", response.getHeaders().get("Content-Type"));
+    }
+
+    @Test
+    void returnsNotModifiedForFutureIfModifiedSince() throws Exception {
+        Files.writeString(root.resolve("page.html"), "<h1>hello</h1>");
+
+        HttpRequest request = new HttpRequest(
+                "GET",
+                "/page.html",
+                "HTTP/1.1",
+                Map.of("Host", "localhost:8080", "If-Modified-Since", "Thu, 01 Jan 2099 00:00:00 GMT"),
+                ""
+        );
+
+        HttpResponse response = handler.handle(request);
+
+        assertEquals(304, response.getStatusCode());
+    }
+
+    @Test
+    void returnsOctetStreamForUnknownExtension() throws Exception {
+        Files.writeString(root.resolve("data.xyz"), "binary data");
+
+        HttpResponse response = handler.handle(get("/data.xyz"));
+
+        assertEquals(200, response.getStatusCode());
+        assertEquals("application/octet-stream", response.getHeaders().get("Content-Type"));
+    }
+
     private HttpRequest get(String path) {
         return new HttpRequest(
                 "GET",
