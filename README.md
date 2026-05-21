@@ -33,5 +33,5 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 | --- | --- | --- | --- | --- |
 | 1 | HTTP Server Tests | 동작 검증 체계 구축 | Parser, Static File, Server Integration 테스트를 추가해 서버 기능을 검증합니다. | [docs/verification/01-http-server-tests.md](docs/verification/01-http-server-tests.md) |
 | 2 | Logging Control | 성능 측정 준비 | 학습용 상세 로그와 benchmark용 최소 로그를 분리할 수 있도록 로그 레벨을 제어합니다. | [docs/verification/02-logging-control.md](docs/verification/02-logging-control.md) |
-| 3 | Benchmark Environment | 부하 테스트 환경 구축 | k6, Prometheus, Grafana 기반으로 서버 성능을 관찰할 수 있는 환경을 정리할 예정입니다. | - |
+| 3 | Benchmark Environment | 부하 테스트 환경 구축 | k6, Prometheus, Grafana 기반으로 서버 성능을 관찰할 수 있는 환경을 구성했습니다. | [docs/verification/03-benchmark-environment.md](docs/verification/03-benchmark-environment.md) |
 | 4 | Benchmark Report | 성능 결과 분석 | RPS, latency, error rate, worker 수에 따른 차이를 측정하고 기록할 예정입니다. | - |
