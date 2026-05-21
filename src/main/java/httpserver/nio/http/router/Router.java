@@ -13,17 +13,28 @@ public class Router {
 
     public HttpResponse handle(HttpRequest request) {
         /*
-         * 아직 GET 외의 method는 처리하지 않습니다.
-         * POST body 처리도 다음 단계의 관심사입니다.
+         * 현재 서버는 정적 리소스를 읽는 GET과, 같은 header만 확인하는 HEAD를 지원합니다.
+         * POST body를 실제 application 로직에 연결하는 일은 아직 하지 않습니다.
          */
-        if (!"GET".equalsIgnoreCase(request.getMethod())) {
+        boolean getMethod = "GET".equalsIgnoreCase(request.getMethod());
+        boolean headMethod = "HEAD".equalsIgnoreCase(request.getMethod());
+
+        if (!getMethod && !headMethod) {
             return HttpResponse.methodNotAllowed();
         }
 
+        HttpResponse response;
+
         if ("/metrics".equals(request.getPath())) {
-            return metricsHandler.handle();
+            response = metricsHandler.handle();
+        } else {
+            response = staticFileHandler.handle(request.getPath());
         }
 
-        return staticFileHandler.handle(request.getPath());
+        if (headMethod) {
+            return response.withoutBody();
+        }
+
+        return response;
     }
 }

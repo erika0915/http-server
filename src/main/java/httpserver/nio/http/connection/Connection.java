@@ -146,7 +146,30 @@ public class Connection {
     }
 
     public boolean isRequestComplete() {
-        return containsHeaderEnd();
+        int headerEndIndex = findHeaderEndIndex();
+
+        if (headerEndIndex < 0) {
+            return false;
+        }
+
+        String headerText = readText(0, headerEndIndex);
+        int bodyStartIndex = headerEndIndex + 4;
+
+        if (isChunkedRequest(headerText)) {
+            return isChunkedBodyComplete(bodyStartIndex);
+        }
+
+        Integer contentLength = parseContentLength(headerText);
+
+        if (contentLength == null) {
+            return true;
+        }
+
+        return readBuffer.position() >= bodyStartIndex + contentLength;
+    }
+
+    public boolean isHeaderTooLarge(int maxHeaderBytes) {
+        return findHeaderEndIndex() < 0 && readBuffer.position() > maxHeaderBytes;
     }
 
     /*
@@ -265,7 +288,7 @@ public class Connection {
         state = nextState;
     }
 
-    private boolean containsHeaderEnd() {
+    private int findHeaderEndIndex() {
         int end = readBuffer.position();
 
         for (int i = 0; i <= end - 4; i++) {
@@ -273,10 +296,85 @@ public class Connection {
                     && readBuffer.get(i + 1) == '\n'
                     && readBuffer.get(i + 2) == '\r'
                     && readBuffer.get(i + 3) == '\n') {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    private String readText(int start, int end) {
+        ByteBuffer readOnlyBuffer = readBuffer.asReadOnlyBuffer();
+        readOnlyBuffer.position(start);
+        readOnlyBuffer.limit(end);
+
+        return StandardCharsets.UTF_8
+                .decode(readOnlyBuffer)
+                .toString();
+    }
+
+    private Integer parseContentLength(String headerText) {
+        String[] lines = headerText.split("\r\n");
+
+        for (String line : lines) {
+            int colonIndex = line.indexOf(':');
+
+            if (colonIndex <= 0) {
+                continue;
+            }
+
+            String headerName = line.substring(0, colonIndex).trim();
+
+            if (!"Content-Length".equalsIgnoreCase(headerName)) {
+                continue;
+            }
+
+            String headerValue = line.substring(colonIndex + 1).trim();
+
+            try {
+                int contentLength = Integer.parseInt(headerValue);
+                return Math.max(contentLength, 0);
+            } catch (NumberFormatException e) {
+                /*
+                 * 잘못된 Content-Length 값은 parser 단계에서 400 Bad Request로 처리합니다.
+                 * 여기서는 요청이 더 오기를 무한히 기다리지 않도록 header까지만 완성된 것으로 봅니다.
+                 */
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    private boolean isChunkedRequest(String headerText) {
+        String[] lines = headerText.split("\r\n");
+
+        for (String line : lines) {
+            int colonIndex = line.indexOf(':');
+
+            if (colonIndex <= 0) {
+                continue;
+            }
+
+            String headerName = line.substring(0, colonIndex).trim();
+            String headerValue = line.substring(colonIndex + 1).trim();
+
+            if ("Transfer-Encoding".equalsIgnoreCase(headerName)
+                    && "chunked".equalsIgnoreCase(headerValue)) {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private boolean isChunkedBodyComplete(int bodyStartIndex) {
+        String bodyText = readText(bodyStartIndex, readBuffer.position());
+
+        /*
+         * Step 16의 학습용 구현에서는 trailer field 없는 가장 단순한 chunked body를 처리합니다.
+         * 마지막 chunk는 0\r\n\r\n 형태로 끝납니다.
+         */
+        return bodyText.startsWith("0\r\n\r\n") || bodyText.contains("\r\n0\r\n\r\n");
     }
 }

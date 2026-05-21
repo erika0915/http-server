@@ -22,3 +22,6 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 | 12 | Timeout / Cleanup | 안정적인 연결 정리 이해 | idle timeout, 잘못된 요청 처리, header size 제한, connection cleanup을 구현했습니다. | [docs/12-timeout-cleanup.md](docs/12-timeout-cleanup.md) |
 | 13 | Multi EventLoop | Reactor 구조 이해 | accept 전용 Boss EventLoop와 read/write 전용 Worker EventLoop를 분리했습니다. | [docs/13-multi-event-loop.md](docs/13-multi-event-loop.md) |
 | 14 | HTTP/1.1 Request Validation | 기본 요청 검증 이해 | Request Line과 HTTP/1.1 `Host` 헤더를 검증하고 잘못된 요청은 `400 Bad Request`로 응답하도록 구현했습니다. | [docs/14-http-request-validation.md](docs/14-http-request-validation.md) |
+| 15 | Content-Length Body Handling | 고정 길이 body 처리 이해 | `Content-Length` 값만큼 요청 body가 모두 도착할 때까지 기다린 뒤 `HttpRequest.body`에 저장하도록 구현했습니다. | [docs/15-content-length-body.md](docs/15-content-length-body.md) |
+| 16 | Transfer-Encoding Chunked | chunked body 처리 이해 | `Transfer-Encoding: chunked` 요청을 감지하고 chunk body를 조립해 일반 body 문자열로 변환하도록 구현했습니다. | [docs/16-transfer-encoding-chunked.md](docs/16-transfer-encoding-chunked.md) |
+| 17 | HEAD Method Support | GET과 HEAD 차이 이해 | `HEAD` 요청에 대해 GET과 같은 header를 반환하되 response body는 전송하지 않도록 구현했습니다. | [docs/17-head-method-support.md](docs/17-head-method-support.md) |

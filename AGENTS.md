@@ -88,13 +88,13 @@ README에는 긴 설명을 넣지 않는다.
 
 ```text
 14 HTTP/1.1 Request Validation
-15 Host Header Validation
-16 Content-Length Body Handling
-17 Transfer-Encoding Chunked
-18 HEAD Method Support
-19 Expanded MIME Types
-20 Last-Modified
-21 ETag
+15 Content-Length Body Handling
+16 Transfer-Encoding Chunked
+17 HEAD Method Support
+18 Expanded MIME Types
+19 Last-Modified
+20 ETag
+21 Conditional Request
 22 Directory Listing
 23 Parser / Server Unit Tests
 24 Benchmark Environment

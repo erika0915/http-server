@@ -131,7 +131,7 @@ public class WorkerEventLoop implements Runnable {
                 return;
             }
 
-            if (connection.requestBytes() > MAX_HEADER_BYTES) {
+            if (connection.isHeaderTooLarge(MAX_HEADER_BYTES)) {
                 System.err.println(connection.label() + " header too large");
                 HttpResponse response = HttpResponse.requestHeaderFieldsTooLarge();
                 connection.prepareResponse(response, false);

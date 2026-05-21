@@ -107,6 +107,24 @@ public class HttpResponse {
         return Arrays.copyOf(body, body.length);
     }
 
+    public HttpResponse withoutBody() {
+        /*
+         * HEAD 응답은 GET과 같은 status/header를 반환하지만 body는 전송하지 않습니다.
+         * Content-Length는 원래 body 길이를 유지해야 클라이언트가 리소스 크기를 알 수 있습니다.
+         */
+        HttpResponse response = new HttpResponse(
+                statusCode,
+                reasonPhrase,
+                headers.getOrDefault("Content-Type", "application/octet-stream"),
+                new byte[0]
+        );
+
+        response.headers.clear();
+        response.headers.putAll(headers);
+
+        return response;
+    }
+
     public byte[] toBytes() {
         StringBuilder response = new StringBuilder();
 

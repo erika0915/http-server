@@ -1,5 +1,6 @@
 package httpserver.nio.http.request;
 
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -90,6 +91,7 @@ public class HttpRequestParser {
         }
 
         validateRequiredHeaders(version, headers);
+        body = parseBody(headers, body);
 
         return new HttpRequest(method, path, version, headers, body);
     }
@@ -98,8 +100,8 @@ public class HttpRequestParser {
         /*
          * Step 14: Request Line을 최소한의 HTTP 요청 형식으로 검증합니다.
          *
-         * 여기서는 아직 Host header, Content-Length body, chunked body 같은
-         * 다음 단계의 검증은 하지 않습니다.
+         * Host header는 같은 요청 검증 단계에서 별도로 확인합니다.
+         * Content-Length body와 chunked body는 body parsing 단계에서 처리합니다.
          */
         if (!isValidMethodToken(method)) {
             throw new IllegalArgumentException("Invalid HTTP method: " + method);
@@ -145,7 +147,7 @@ public class HttpRequestParser {
 
     private void validateRequiredHeaders(String version, Map<String, String> headers) {
         /*
-         * Step 15: HTTP/1.1 요청에서는 Host header가 필수입니다.
+         * Step 14: HTTP/1.1 요청에서는 Host header가 필수입니다.
          *
          * 같은 IP와 port에 여러 도메인을 연결할 수 있기 때문에,
          * 서버는 Host header를 보고 클라이언트가 어떤 host를 요청했는지 알 수 있습니다.
@@ -161,6 +163,95 @@ public class HttpRequestParser {
 
         if (host == null || host.isBlank()) {
             throw new IllegalArgumentException("HTTP/1.1 request requires Host header");
+        }
+    }
+
+    private String parseBody(Map<String, String> headers, String rawBody) {
+        if (isChunked(headers)) {
+            return decodeChunkedBody(rawBody);
+        }
+
+        String contentLengthValue = headers.get("Content-Length");
+
+        if (contentLengthValue == null) {
+            return rawBody;
+        }
+
+        int contentLength;
+
+        try {
+            contentLength = Integer.parseInt(contentLengthValue);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid Content-Length: " + contentLengthValue);
+        }
+
+        if (contentLength < 0) {
+            throw new IllegalArgumentException("Content-Length must not be negative: " + contentLength);
+        }
+
+        int bodyBytes = rawBody.getBytes(StandardCharsets.UTF_8).length;
+
+        if (bodyBytes < contentLength) {
+            throw new IllegalArgumentException("Request body is shorter than Content-Length");
+        }
+
+        /*
+         * 현재 단계에서는 POST body를 깊게 처리하지 않고 문자열로 저장만 합니다.
+         * ASCII body 기준으로 Content-Length만큼만 잘라 저장합니다.
+         */
+        if (rawBody.length() > contentLength) {
+            return rawBody.substring(0, contentLength);
+        }
+
+        return rawBody;
+    }
+
+    private boolean isChunked(Map<String, String> headers) {
+        String transferEncoding = headers.get("Transfer-Encoding");
+
+        return transferEncoding != null && "chunked".equalsIgnoreCase(transferEncoding.trim());
+    }
+
+    private String decodeChunkedBody(String rawBody) {
+        StringBuilder decodedBody = new StringBuilder();
+        int cursor = 0;
+
+        while (true) {
+            int sizeEndIndex = rawBody.indexOf(CRLF, cursor);
+
+            if (sizeEndIndex < 0) {
+                throw new IllegalArgumentException("Chunk size line is incomplete");
+            }
+
+            String sizeText = rawBody.substring(cursor, sizeEndIndex).trim();
+            int chunkSize;
+
+            try {
+                chunkSize = Integer.parseInt(sizeText, 16);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid chunk size: " + sizeText);
+            }
+
+            cursor = sizeEndIndex + CRLF.length();
+
+            if (chunkSize == 0) {
+                return decodedBody.toString();
+            }
+
+            int chunkEndIndex = cursor + chunkSize;
+
+            if (chunkEndIndex > rawBody.length()) {
+                throw new IllegalArgumentException("Chunk data is incomplete");
+            }
+
+            decodedBody.append(rawBody, cursor, chunkEndIndex);
+            cursor = chunkEndIndex;
+
+            if (!rawBody.startsWith(CRLF, cursor)) {
+                throw new IllegalArgumentException("Chunk data must end with CRLF");
+            }
+
+            cursor += CRLF.length();
         }
     }
 }
