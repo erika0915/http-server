@@ -22,3 +22,4 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 | 12 | Timeout / Cleanup | 안정적인 연결 정리 이해 | idle timeout, 잘못된 요청 처리, header size 제한, connection cleanup을 구현했습니다. | [docs/12-timeout-cleanup.md](docs/12-timeout-cleanup.md) |
 | 13 | Multi EventLoop | Reactor 구조 이해 | accept 전용 Boss EventLoop와 read/write 전용 Worker EventLoop를 분리했습니다. | [docs/13-multi-event-loop.md](docs/13-multi-event-loop.md) |
 | 14 | HTTP/1.1 Request Validation | 요청 라인 검증 이해 | HTTP method, path, version 형식을 검증하고 잘못된 요청은 `400 Bad Request`로 응답하도록 구현했습니다. | [docs/14-http-request-validation.md](docs/14-http-request-validation.md) |
+| 15 | Host Header Validation | HTTP/1.1 필수 헤더 이해 | HTTP/1.1 요청에서 `Host` 헤더가 없거나 비어 있으면 `400 Bad Request`로 응답하도록 구현했습니다. | [docs/15-host-header-validation.md](docs/15-host-header-validation.md) |

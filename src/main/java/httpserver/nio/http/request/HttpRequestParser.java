@@ -89,6 +89,8 @@ public class HttpRequestParser {
             headers.put(headerName, headerValue);
         }
 
+        validateRequiredHeaders(version, headers);
+
         return new HttpRequest(method, path, version, headers, body);
     }
 
@@ -139,5 +141,26 @@ public class HttpRequestParser {
          * HTTP/1.0과 HTTP/1.1만 유효한 version으로 다룹니다.
          */
         return "HTTP/1.0".equals(version) || "HTTP/1.1".equals(version);
+    }
+
+    private void validateRequiredHeaders(String version, Map<String, String> headers) {
+        /*
+         * Step 15: HTTP/1.1 요청에서는 Host header가 필수입니다.
+         *
+         * 같은 IP와 port에 여러 도메인을 연결할 수 있기 때문에,
+         * 서버는 Host header를 보고 클라이언트가 어떤 host를 요청했는지 알 수 있습니다.
+         *
+         * 이 단계에서는 Host의 값이 실제 서버 주소와 일치하는지까지는 검사하지 않고,
+         * HTTP/1.1 요청에 Host가 존재하고 비어 있지 않은지만 확인합니다.
+         */
+        if (!"HTTP/1.1".equals(version)) {
+            return;
+        }
+
+        String host = headers.get("Host");
+
+        if (host == null || host.isBlank()) {
+            throw new IllegalArgumentException("HTTP/1.1 request requires Host header");
+        }
     }
 }
