@@ -1,5 +1,7 @@
 package httpserver.nio.http.eventloop;
 
+import httpserver.nio.http.logging.ServerLogger;
+
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -28,7 +30,7 @@ public class BossEventLoop {
 
     public void run() throws IOException {
         Thread.currentThread().setName("boss-thread");
-        System.out.println("[boss] started");
+        ServerLogger.info("[boss] started");
 
         while (true) {
             selector.select();
@@ -63,8 +65,8 @@ public class BossEventLoop {
         int connectionId = workerGroup.nextConnectionId();
         WorkerEventLoop worker = workerGroup.nextWorker();
 
-        System.out.println("[boss] accepted connection conn-" + connectionId);
-        System.out.println("[boss] assigned conn-" + connectionId + " -> " + worker.name());
+        ServerLogger.debug("[boss] accepted connection conn-" + connectionId);
+        ServerLogger.debug("[boss] assigned conn-" + connectionId + " -> " + worker.name());
 
         worker.register(clientChannel, connectionId);
     }

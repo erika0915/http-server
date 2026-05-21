@@ -1,6 +1,7 @@
 package httpserver.nio.http.eventloop;
 
 import httpserver.nio.http.connection.Connection;
+import httpserver.nio.http.logging.ServerLogger;
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.request.HttpRequestParser;
 import httpserver.nio.http.response.HttpResponse;
@@ -67,7 +68,7 @@ public class WorkerEventLoop implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("[" + name + "] started");
+        ServerLogger.debug("[" + name + "] started");
 
         while (true) {
             try {
@@ -76,7 +77,7 @@ public class WorkerEventLoop implements Runnable {
                 processSelectedKeys();
                 cleanupConnections(System.currentTimeMillis());
             } catch (IOException e) {
-                System.err.println("[" + name + "] event loop error: " + e.getMessage());
+                ServerLogger.error("[" + name + "] event loop error: " + e.getMessage());
             }
         }
     }
@@ -92,7 +93,7 @@ public class WorkerEventLoop implements Runnable {
             activeConnections.put(connection.connectionId(), connection);
             metrics.recordConnectionAccepted(stats);
 
-            System.out.println("[" + name + "] registered conn-" + connection.connectionId());
+            ServerLogger.debug("[" + name + "] registered conn-" + connection.connectionId());
             printActiveConnectionCount();
         }
     }
@@ -132,7 +133,7 @@ public class WorkerEventLoop implements Runnable {
             }
 
             if (connection.isHeaderTooLarge(MAX_HEADER_BYTES)) {
-                System.err.println(connection.label() + " header too large");
+                ServerLogger.error(connection.label() + " header too large");
                 HttpResponse response = HttpResponse.requestHeaderFieldsTooLarge();
                 connection.prepareResponse(response, false);
                 printErrorResponse(connection, response);
@@ -142,7 +143,7 @@ public class WorkerEventLoop implements Runnable {
 
             if (!connection.isRequestComplete()) {
                 if (!connection.canReadMore()) {
-                    System.err.println(connection.label() + " read buffer is full before request was complete");
+                    ServerLogger.error(connection.label() + " read buffer is full before request was complete");
                     HttpResponse response = HttpResponse.requestHeaderFieldsTooLarge();
                     connection.prepareResponse(response, false);
                     printErrorResponse(connection, response);
@@ -154,7 +155,7 @@ public class WorkerEventLoop implements Runnable {
                     return;
                 }
 
-                System.out.println(connection.label() + " request incomplete, waiting for more data");
+                ServerLogger.debug(connection.label() + " request incomplete, waiting for more data");
                 key.interestOps(SelectionKey.OP_READ);
                 return;
             }
@@ -163,7 +164,7 @@ public class WorkerEventLoop implements Runnable {
                 return;
             }
 
-            System.out.println(connection.label() + " request complete");
+            ServerLogger.debug(connection.label() + " request complete");
             String rawRequest = connection.readRequestText();
 
             try {
@@ -172,7 +173,7 @@ public class WorkerEventLoop implements Runnable {
                 metrics.recordRequest(stats);
 
                 int requestNumber = connection.nextRequestNumber();
-                System.out.println("[" + name + "] request " + request.getMethod() + " " + request.getPath()
+                ServerLogger.debug("[" + name + "] request " + request.getMethod() + " " + request.getPath()
                         + " on conn-" + connection.connectionId() + " (#" + requestNumber + ")");
 
                 printParsedRequest(connection, connection.requestBytes(), rawRequest, request);
@@ -184,7 +185,7 @@ public class WorkerEventLoop implements Runnable {
                 printSelectedRoute(connection, request, response, keepAlive);
                 key.interestOps(SelectionKey.OP_WRITE);
             } catch (IllegalArgumentException e) {
-                System.err.println(connection.label() + " malformed request: " + e.getMessage());
+                ServerLogger.error(connection.label() + " malformed request: " + e.getMessage());
                 printRawRequest(rawRequest);
                 HttpResponse response = HttpResponse.badRequest();
                 connection.prepareResponse(response, false);
@@ -192,10 +193,10 @@ public class WorkerEventLoop implements Runnable {
                 key.interestOps(SelectionKey.OP_WRITE);
             }
         } catch (IOException e) {
-            System.err.println(connection.label() + " IOException during read, closing: " + e.getMessage());
+            ServerLogger.error(connection.label() + " IOException during read, closing: " + e.getMessage());
             closeConnection(key, connection, "read-error");
         } catch (RuntimeException e) {
-            System.err.println(connection.label() + " unexpected read error: " + e.getMessage());
+            ServerLogger.error(connection.label() + " unexpected read error: " + e.getMessage());
             prepareInternalServerError(key, connection);
         }
     }
@@ -217,10 +218,10 @@ public class WorkerEventLoop implements Runnable {
                 metrics.recordResponseTime(System.nanoTime() - startedAtNanos);
             }
 
-            System.out.println("[" + name + "] response complete conn-" + connection.connectionId());
+            ServerLogger.debug("[" + name + "] response complete conn-" + connection.connectionId());
 
             if (connection.keepAlive()) {
-                System.out.println(connection.label() + " keep-alive " + connection.keepAlive());
+                ServerLogger.debug(connection.label() + " keep-alive " + connection.keepAlive());
                 connection.readyToReadNextRequest();
                 key.interestOps(SelectionKey.OP_READ);
                 return;
@@ -228,7 +229,7 @@ public class WorkerEventLoop implements Runnable {
 
             closeConnection(key, connection, "connection-close");
         } catch (IOException e) {
-            System.err.println(connection.label() + " IOException during write, closing: " + e.getMessage());
+            ServerLogger.error(connection.label() + " IOException during write, closing: " + e.getMessage());
             closeConnection(key, connection, "write-error");
         }
     }
@@ -261,26 +262,26 @@ public class WorkerEventLoop implements Runnable {
             String rawRequest,
             HttpRequest request
     ) throws IOException {
-        System.out.println();
-        System.out.println("==================================================");
-        System.out.println("[" + name + "] parsed HTTP request from " + connection.channel().getRemoteAddress());
-        System.out.println(connection.label() + " bytes read: " + totalBytesRead);
+        ServerLogger.debugBlankLine();
+        ServerLogger.debug("==================================================");
+        ServerLogger.debug("[" + name + "] parsed HTTP request from " + connection.channel().getRemoteAddress());
+        ServerLogger.debug(connection.label() + " bytes read: " + totalBytesRead);
 
         printRawRequest(rawRequest);
 
-        System.out.println();
-        System.out.println("----- parsed request -----");
-        System.out.println("method  = " + request.getMethod());
-        System.out.println("path    = " + request.getPath());
-        System.out.println("version = " + request.getVersion());
+        ServerLogger.debugBlankLine();
+        ServerLogger.debug("----- parsed request -----");
+        ServerLogger.debug("method  = " + request.getMethod());
+        ServerLogger.debug("path    = " + request.getPath());
+        ServerLogger.debug("version = " + request.getVersion());
 
-        System.out.println();
-        System.out.println("headers = " + request.getHeaders());
-        System.out.println("header count = " + request.getHeaders().size());
+        ServerLogger.debugBlankLine();
+        ServerLogger.debug("headers = " + request.getHeaders());
+        ServerLogger.debug("header count = " + request.getHeaders().size());
 
-        System.out.println();
-        System.out.println("body = \"" + request.getBody() + "\"");
-        System.out.println("==================================================");
+        ServerLogger.debugBlankLine();
+        ServerLogger.debug("body = \"" + request.getBody() + "\"");
+        ServerLogger.debug("==================================================");
     }
 
     private void printSelectedRoute(
@@ -289,30 +290,30 @@ public class WorkerEventLoop implements Runnable {
             HttpResponse response,
             boolean keepAlive
     ) {
-        System.out.println();
-        System.out.println("----- selected route -----");
-        System.out.println("[" + name + "] request = " + request.getMethod() + " " + request.getPath()
+        ServerLogger.debugBlankLine();
+        ServerLogger.debug("----- selected route -----");
+        ServerLogger.debug("[" + name + "] request = " + request.getMethod() + " " + request.getPath()
                 + " conn-" + connection.connectionId());
-        System.out.println("[" + name + "] response = " + response.getStatusCode() + " " + response.getReasonPhrase());
-        System.out.println("[" + name + "] connection = " + (keepAlive ? "keep-alive" : "close"));
-        System.out.println("content-type = " + response.getHeaders().get("Content-Type"));
+        ServerLogger.debug("[" + name + "] response = " + response.getStatusCode() + " " + response.getReasonPhrase());
+        ServerLogger.debug("[" + name + "] connection = " + (keepAlive ? "keep-alive" : "close"));
+        ServerLogger.debug("content-type = " + response.getHeaders().get("Content-Type"));
     }
 
     private void printErrorResponse(Connection connection, HttpResponse response) {
-        System.out.println("[" + name + "] conn-" + connection.connectionId() + " response "
+        ServerLogger.debug("[" + name + "] conn-" + connection.connectionId() + " response "
                 + response.getStatusCode() + " " + response.getReasonPhrase());
     }
 
     private void printRawRequest(String rawRequest) {
         String visibleRawRequest = rawRequest.replace("\r", "\\r");
 
-        System.out.println();
-        System.out.println("----- raw request start -----");
-        System.out.print(visibleRawRequest);
+        ServerLogger.debugBlankLine();
+        ServerLogger.debug("----- raw request start -----");
+        ServerLogger.debugPrint(visibleRawRequest);
         if (!visibleRawRequest.endsWith("\n")) {
-            System.out.println();
+            ServerLogger.debugBlankLine();
         }
-        System.out.println("----- raw request end -----");
+        ServerLogger.debug("----- raw request end -----");
     }
 
     private void cleanupConnections(long now) {
@@ -327,7 +328,7 @@ public class WorkerEventLoop implements Runnable {
             }
 
             if (connection.isIdleTimeout(now, IDLE_TIMEOUT_MILLIS)) {
-                System.out.println(connection.label() + " idle timeout after " + IDLE_TIMEOUT_MILLIS + "ms");
+                ServerLogger.debug(connection.label() + " idle timeout after " + IDLE_TIMEOUT_MILLIS + "ms");
 
                 SelectionKey key = connection.selectionKey();
                 if (key != null) {
@@ -356,7 +357,7 @@ public class WorkerEventLoop implements Runnable {
         int activeConnectionCount = activeConnections.size();
 
         if (activeConnectionCount != lastPrintedActiveConnectionCount) {
-            System.out.println("[" + name + "] active connections=" + activeConnectionCount);
+            ServerLogger.debug("[" + name + "] active connections=" + activeConnectionCount);
             lastPrintedActiveConnectionCount = activeConnectionCount;
         }
     }

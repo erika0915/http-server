@@ -1,6 +1,6 @@
 package httpserver.nio.http.metrics;
 
-import java.util.Locale;
+import httpserver.nio.http.logging.ServerLogger;
 
 public class MetricsReporter implements Runnable {
 
@@ -32,27 +32,27 @@ public class MetricsReporter implements Runnable {
     }
 
     private void printReport() {
-        System.out.println();
-        System.out.println("========== SERVER METRICS ==========");
-        System.out.println("uptime=" + metrics.uptimeSeconds() + "s");
-        System.out.println("totalRequests=" + metrics.totalRequests());
-        System.out.printf(Locale.US, "requestsPerSecond=%.3f%n", metrics.requestsPerSecond());
-        System.out.println("activeConnections=" + metrics.activeConnections());
-        System.out.println("totalConnections=" + metrics.totalConnections());
-        System.out.println("bytesRead=" + metrics.bytesRead());
-        System.out.println("bytesWritten=" + metrics.bytesWritten());
-        System.out.printf(Locale.US, "averageResponseTimeMillis=%.3f%n", metrics.averageResponseTimeMillis());
-        System.out.printf(Locale.US, "maxResponseTimeMillis=%.3f%n", metrics.maxResponseTimeMillis());
+        ServerLogger.metrics("");
+        ServerLogger.metrics("========== SERVER METRICS ==========");
+        ServerLogger.metrics("uptime=" + metrics.uptimeSeconds() + "s");
+        ServerLogger.metrics("totalRequests=" + metrics.totalRequests());
+        ServerLogger.metricsf("requestsPerSecond=%.3f%n", metrics.requestsPerSecond());
+        ServerLogger.metrics("activeConnections=" + metrics.activeConnections());
+        ServerLogger.metrics("totalConnections=" + metrics.totalConnections());
+        ServerLogger.metrics("bytesRead=" + metrics.bytesRead());
+        ServerLogger.metrics("bytesWritten=" + metrics.bytesWritten());
+        ServerLogger.metricsf("averageResponseTimeMillis=%.3f%n", metrics.averageResponseTimeMillis());
+        ServerLogger.metricsf("maxResponseTimeMillis=%.3f%n", metrics.maxResponseTimeMillis());
 
         for (WorkerStats stats : metrics.allWorkerStats()) {
-            System.out.println(stats.workerName()
+            ServerLogger.metrics(stats.workerName()
                     + " requests=" + stats.requestCount()
                     + " activeConnections=" + stats.activeConnections()
                     + " bytesRead=" + stats.bytesRead()
                     + " bytesWritten=" + stats.bytesWritten());
         }
 
-        System.out.println("====================================");
-        System.out.println();
+        ServerLogger.metrics("====================================");
+        ServerLogger.metrics("");
     }
 }

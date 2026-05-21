@@ -2,6 +2,7 @@ package httpserver.nio.http;
 
 import httpserver.nio.http.eventloop.BossEventLoop;
 import httpserver.nio.http.eventloop.EventLoopGroup;
+import httpserver.nio.http.logging.ServerLogger;
 import httpserver.nio.http.metrics.MetricsReporter;
 import httpserver.nio.http.metrics.ServerMetrics;
 
@@ -35,15 +36,15 @@ public class HttpServer {
 
             BossEventLoop bossEventLoop = new BossEventLoop(serverChannel, workerGroup);
 
-            System.out.println("[server] NIO HTTP Server with Multi EventLoop started");
-            System.out.println("[server] Listening on http://" + HOST + ":" + PORT);
-            System.out.println("[server] workers=" + workerCount);
-            System.out.println("[server] Try: curl -v localhost:8080/");
+            ServerLogger.info("[server] NIO HTTP Server with Multi EventLoop started");
+            ServerLogger.info("[server] Listening on http://" + HOST + ":" + PORT);
+            ServerLogger.info("[server] workers=" + workerCount);
+            ServerLogger.info("[server] logLevel=" + System.getProperty("httpserver.logLevel", "DEBUG"));
+            ServerLogger.info("[server] Try: curl -v localhost:8080/");
 
             bossEventLoop.run();
         } catch (IOException e) {
-            System.err.println("[server] Server error: " + e.getMessage());
-            e.printStackTrace();
+            ServerLogger.error("[server] Server error: " + e.getMessage(), e);
         }
     }
 

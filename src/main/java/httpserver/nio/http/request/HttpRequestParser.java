@@ -1,5 +1,7 @@
 package httpserver.nio.http.request;
 
+import httpserver.nio.http.logging.ServerLogger;
+
 import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import java.util.TreeMap;
@@ -30,7 +32,7 @@ public class HttpRequestParser {
              * 정상적인 HTTP 요청이라면 \r\n\r\n이 있어야 합니다.
              * 다만 학습용 서버가 바로 죽지 않도록, 현재까지 읽힌 전체 문자열을 header로 취급합니다.
              */
-            System.err.println("[parser] Header end marker \\r\\n\\r\\n was not found");
+            ServerLogger.debug("[parser] Header end marker \\r\\n\\r\\n was not found");
             headPart = rawRequest;
             body = "";
         }
@@ -80,7 +82,7 @@ public class HttpRequestParser {
             int colonIndex = line.indexOf(':');
 
             if (colonIndex <= 0) {
-                System.err.println("[parser] Ignoring malformed header: " + line);
+                ServerLogger.debug("[parser] Ignoring malformed header: " + line);
                 continue;
             }
 

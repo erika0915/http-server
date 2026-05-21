@@ -2,6 +2,7 @@ package httpserver.nio.http.connection;
 
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.logging.ServerLogger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -40,8 +41,8 @@ public class Connection {
         this.lastActiveAt = connectedAt;
         this.state = ConnectionState.READING;
 
-        System.out.println(label() + " connected");
-        System.out.println(label() + " state " + state);
+        ServerLogger.debug(label() + " connected");
+        ServerLogger.debug(label() + " state " + state);
     }
 
     public String label() {
@@ -125,7 +126,7 @@ public class Connection {
                 return -1;
             }
 
-            System.out.println(label() + " read " + bytesRead + " bytes");
+            ServerLogger.debug(label() + " read " + bytesRead + " bytes");
 
             if (bytesRead == 0) {
                 break;
@@ -238,14 +239,14 @@ public class Connection {
 
         int bytesWritten = channel.write(writeBuffer);
         lastBytesWritten = bytesWritten;
-        System.out.println(label() + " wrote " + bytesWritten + " bytes");
+        ServerLogger.debug(label() + " wrote " + bytesWritten + " bytes");
 
         if (writeBuffer.hasRemaining()) {
-            System.out.println(label() + " write incomplete, remaining=" + writeBuffer.remaining());
+            ServerLogger.debug(label() + " write incomplete, remaining=" + writeBuffer.remaining());
             return false;
         }
 
-        System.out.println(label() + " response complete");
+        ServerLogger.debug(label() + " response complete");
         return true;
     }
 
@@ -272,19 +273,19 @@ public class Connection {
             transitionTo(ConnectionState.CLOSING);
             transitionTo(ConnectionState.CLOSED);
             channel.close();
-            System.out.println(label() + " closed reason=" + reason);
+            ServerLogger.debug(label() + " closed reason=" + reason);
         } catch (IOException e) {
-            System.err.println(label() + " error while closing: " + e.getMessage());
+            ServerLogger.error(label() + " error while closing: " + e.getMessage());
         }
     }
 
     private void transitionTo(ConnectionState nextState) {
         if (state == nextState) {
-            System.out.println(label() + " state " + state);
+            ServerLogger.debug(label() + " state " + state);
             return;
         }
 
-        System.out.println(label() + " state " + state + " -> " + nextState);
+        ServerLogger.debug(label() + " state " + state + " -> " + nextState);
         state = nextState;
     }
 

@@ -2,6 +2,7 @@ package httpserver.nio.http.staticfile;
 
 import httpserver.nio.http.request.HttpRequest;
 import httpserver.nio.http.response.HttpResponse;
+import httpserver.nio.http.logging.ServerLogger;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -37,7 +38,7 @@ public class StaticFileHandler {
 
     public StaticFileHandler(Path root) {
         this.root = root.toAbsolutePath().normalize();
-        System.out.println("[static] public root = " + root);
+        ServerLogger.debug("[static] public root = " + root);
     }
 
     public HttpResponse handle(HttpRequest request) {
@@ -46,15 +47,15 @@ public class StaticFileHandler {
         try {
             Path filePath = resolveFilePath(requestPath);
 
-            System.out.println("[static] request path = " + requestPath);
-            System.out.println("[static] file path    = " + filePath);
+            ServerLogger.debug("[static] request path = " + requestPath);
+            ServerLogger.debug("[static] file path    = " + filePath);
 
             /*
              * resolve + normalize 후에도 public root 밖으로 나가면 차단합니다.
              * 예: /../../etc/passwd
              */
             if (!filePath.startsWith(root)) {
-                System.out.println("[static] blocked path traversal attempt");
+                ServerLogger.debug("[static] blocked path traversal attempt");
                 return HttpResponse.notFound();
             }
 
@@ -72,7 +73,7 @@ public class StaticFileHandler {
 
             return handleFile(request, filePath);
         } catch (IOException e) {
-            System.err.println("[static] Failed to read static file: " + e.getMessage());
+            ServerLogger.error("[static] Failed to read static file: " + e.getMessage());
             return HttpResponse.notFound();
         }
     }
@@ -101,10 +102,10 @@ public class StaticFileHandler {
         String lastModifiedHeader = formatHttpDate(lastModified);
         String etag = createEtag(filePath);
 
-        System.out.println("[static] content type  = " + contentType);
-        System.out.println("[static] file bytes    = " + fileBytes.length);
-        System.out.println("[static] last-modified = " + lastModifiedHeader);
-        System.out.println("[static] etag          = " + etag);
+        ServerLogger.debug("[static] content type  = " + contentType);
+        ServerLogger.debug("[static] file bytes    = " + fileBytes.length);
+        ServerLogger.debug("[static] last-modified = " + lastModifiedHeader);
+        ServerLogger.debug("[static] etag          = " + etag);
 
         if (isNotModified(request.getHeaders(), etag, lastModified)) {
             HttpResponse response = HttpResponse.notModified();
