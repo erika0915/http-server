@@ -4,7 +4,7 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 
 프레임워크나 웹 서버 라이브러리에 의존하지 않고, TCP 연결 수락부터 HTTP 요청 파싱, 응답 생성, 정적 파일 서빙, Keep-Alive, connection 상태 관리, Multi EventLoop 구조까지 저수준에서 직접 다루는 것을 목표로 합니다.
 
-## 진행 상황
+## 서버 구현
 
 | 숫자 | 이름 | 학습 목표 | 설명 | Docs |
 | --- | --- | --- | --- | --- |
@@ -26,3 +26,12 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 | 16 | Transfer-Encoding Chunked | chunked body 처리 이해 | `Transfer-Encoding: chunked` 요청을 감지하고 chunk body를 조립해 일반 body 문자열로 변환하도록 구현했습니다. | [docs/16-transfer-encoding-chunked.md](docs/16-transfer-encoding-chunked.md) |
 | 17 | HEAD Method Support | GET과 HEAD 차이 이해 | `HEAD` 요청에 대해 GET과 같은 header를 반환하되 response body는 전송하지 않도록 구현했습니다. | [docs/17-head-method-support.md](docs/17-head-method-support.md) |
 | 18 | Static File Completion | 정적 파일 서버 완성도 향상 | MIME 타입 확장, `Last-Modified`, `ETag`, 조건부 요청, 디렉토리 리스팅을 구현했습니다. | [docs/18-static-file-completion.md](docs/18-static-file-completion.md) |
+
+## 검증과 성능 개선
+
+| 숫자 | 이름 | 목표 | 설명 | Docs |
+| --- | --- | --- | --- | --- |
+| 1 | HTTP Server Tests | 동작 검증 체계 구축 | Parser, Static File, Server Integration 테스트를 추가해 서버 기능을 검증합니다. | [docs/verification/01-http-server-tests.md](docs/verification/01-http-server-tests.md) |
+| 2 | Logging Control | 성능 측정 준비 | 학습용 상세 로그와 benchmark용 최소 로그를 분리할 예정입니다. | - |
+| 3 | Benchmark Environment | 부하 테스트 환경 구축 | k6, Prometheus, Grafana 기반으로 서버 성능을 관찰할 수 있는 환경을 정리할 예정입니다. | - |
+| 4 | Benchmark Report | 성능 결과 분석 | RPS, latency, error rate, worker 수에 따른 차이를 측정하고 기록할 예정입니다. | - |
