@@ -2,12 +2,12 @@ import http from 'k6/http';
 import { check, sleep } from 'k6';
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:8080';
-const TARGET_VUS = Number(__ENV.TARGET_VUS || 20);
+const TARGET_VUS = Number(__ENV.TARGET_VUS || 100);
 const RAMP_UP = __ENV.RAMP_UP || '30s';
 const STEADY = __ENV.STEADY || '1m';
 const RAMP_DOWN = __ENV.RAMP_DOWN || '30s';
 const P95_THRESHOLD_MS = Number(__ENV.P95_THRESHOLD_MS || 300);
-const SLEEP_SECONDS = Number(__ENV.SLEEP_SECONDS || 1);
+const SLEEP_SECONDS = Number(__ENV.SLEEP_SECONDS || 0);
 
 export const options = {
   stages: [
@@ -53,5 +53,7 @@ export default function () {
     'app.js status is 200': (response) => response.status === 200,
   });
 
-  sleep(SLEEP_SECONDS);
+  if (SLEEP_SECONDS > 0) {
+    sleep(SLEEP_SECONDS);
+  }
 }
