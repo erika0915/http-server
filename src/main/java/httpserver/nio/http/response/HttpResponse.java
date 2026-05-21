@@ -54,6 +54,10 @@ public class HttpResponse {
         return new HttpResponse(200, "OK", contentType, body);
     }
 
+    public static HttpResponse notModified() {
+        return of(304, "Not Modified", "text/plain", "");
+    }
+
     public static HttpResponse notFound() {
         return of(404, "Not Found", "text/plain", "404 Not Found");
     }

@@ -91,14 +91,10 @@ README에는 긴 설명을 넣지 않는다.
 15 Content-Length Body Handling
 16 Transfer-Encoding Chunked
 17 HEAD Method Support
-18 Expanded MIME Types
-19 Last-Modified
-20 ETag
-21 Conditional Request
-22 Directory Listing
-23 Parser / Server Unit Tests
-24 Benchmark Environment
-25 Benchmark Report
+18 Static File Completion
+19 Parser / Server Unit Tests
+20 Benchmark Environment
+21 Benchmark Report
 ```
 
 ## 구현 시 주의사항

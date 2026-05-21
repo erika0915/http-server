@@ -28,7 +28,7 @@ public class Router {
         if ("/metrics".equals(request.getPath())) {
             response = metricsHandler.handle();
         } else {
-            response = staticFileHandler.handle(request.getPath());
+            response = staticFileHandler.handle(request);
         }
 
         if (headMethod) {

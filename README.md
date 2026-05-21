@@ -25,3 +25,4 @@ Java NIO의 `Selector`, `SocketChannel`, `ServerSocketChannel`, `ByteBuffer`를 
 | 15 | Content-Length Body Handling | 고정 길이 body 처리 이해 | `Content-Length` 값만큼 요청 body가 모두 도착할 때까지 기다린 뒤 `HttpRequest.body`에 저장하도록 구현했습니다. | [docs/15-content-length-body.md](docs/15-content-length-body.md) |
 | 16 | Transfer-Encoding Chunked | chunked body 처리 이해 | `Transfer-Encoding: chunked` 요청을 감지하고 chunk body를 조립해 일반 body 문자열로 변환하도록 구현했습니다. | [docs/16-transfer-encoding-chunked.md](docs/16-transfer-encoding-chunked.md) |
 | 17 | HEAD Method Support | GET과 HEAD 차이 이해 | `HEAD` 요청에 대해 GET과 같은 header를 반환하되 response body는 전송하지 않도록 구현했습니다. | [docs/17-head-method-support.md](docs/17-head-method-support.md) |
+| 18 | Static File Completion | 정적 파일 서버 완성도 향상 | MIME 타입 확장, `Last-Modified`, `ETag`, 조건부 요청, 디렉토리 리스팅을 구현했습니다. | [docs/18-static-file-completion.md](docs/18-static-file-completion.md) |
