@@ -82,19 +82,29 @@ README에는 긴 설명을 넣지 않는다.
 
 ## 현재 진행 방향
 
-참고 프로젝트처럼 더 완성도 있는 HTTP 서버에 가까워지기 위해 HTTP/1.1 기능 완성도를 먼저 높인다.
+참고 프로젝트처럼 더 완성도 있는 HTTP 서버에 가까워지기 위해 서버 구현은 큰 학습 흐름 단위로 정리하고, 이후에는 검증과 성능 개선을 별도 흐름으로 진행한다.
 
 권장 진행 순서는 다음과 같다.
 
 ```text
-14 HTTP/1.1 Request Validation
-15 Content-Length Body Handling
-16 Transfer-Encoding Chunked
-17 HEAD Method Support
-18 Static File Completion
-19 Parser / Server Unit Tests
-20 Benchmark Environment
-21 Benchmark Report
+서버 구현
+1  Blocking Echo Server
+2  NIO Echo Server
+3  ByteBuffer Experiment
+4  Minimal HTTP Server
+5  HTTP Request Observation
+6  HttpRequest Parser
+7  Router / HttpResponse
+8  Static File Server
+9  Connection Lifecycle
+10 Multi EventLoop
+11 HTTP/1.1 Protocol Handling
+
+검증과 성능 개선
+1 HTTP Server Tests
+2 Logging Control
+3 Benchmark Environment
+4 Benchmark Report
 ```
 
 ## 구현 시 주의사항
